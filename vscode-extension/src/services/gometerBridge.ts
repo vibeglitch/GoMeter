@@ -49,7 +49,18 @@ export class GoMeterBridge {
       return configPath;
     }
 
-    // 2. Bundled binary inside the installed VS Code extension
+    // 2. Check workspace root bin/gometer (useful when developing GoMeter or using project-local binary)
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (workspaceFolders && workspaceFolders.length > 0) {
+      const rootPath = workspaceFolders[0].uri.fsPath;
+      const binName = process.platform === 'win32' ? 'gometer.exe' : 'gometer';
+      const localBin = path.join(rootPath, 'bin', binName);
+      if (fs.existsSync(localBin)) {
+        return localBin;
+      }
+    }
+
+    // 3. Bundled binary inside the installed VS Code extension
     if (this.extensionContext) {
       const bundledBin = this.extensionContext.asAbsolutePath(
         path.join('bin', process.platform === 'win32' ? 'gometer.exe' : 'gometer')
@@ -64,16 +75,6 @@ export class GoMeterBridge {
           // Ignore permission set error if read-only
         }
         return bundledBin;
-      }
-    }
-
-    // 3. Check workspace root bin/gometer
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (workspaceFolders && workspaceFolders.length > 0) {
-      const rootPath = workspaceFolders[0].uri.fsPath;
-      const localBin = path.join(rootPath, 'bin', 'gometer');
-      if (fs.existsSync(localBin)) {
-        return localBin;
       }
     }
 

@@ -7,6 +7,8 @@ export class DashboardPanel {
   private readonly _extensionUri: vscode.Uri;
   private _bridge?: GoMeterBridge;
   private _disposables: vscode.Disposable[] = [];
+  private static _latestReport?: any;
+  private static _latestStatus: string = 'Ready';
 
   public static createOrShow(extensionUri: vscode.Uri, bridge?: GoMeterBridge) {
     const column = vscode.window.activeTextEditor
@@ -47,6 +49,15 @@ export class DashboardPanel {
     this._panel.webview.onDidReceiveMessage(
       (message) => {
         switch (message.command) {
+          case 'ready':
+            this.sendStatus(DashboardPanel._latestStatus);
+            if (DashboardPanel._latestReport) {
+              this.sendReport(DashboardPanel._latestReport);
+            }
+            if (this._bridge) {
+              this.sendHistory(this._bridge.getRunHistory());
+            }
+            break;
           case 'analyzeWithAI':
             vscode.commands.executeCommand('gometer.analyzeReportWithAI');
             break;
@@ -91,6 +102,7 @@ export class DashboardPanel {
   }
 
   public sendReport(report: any) {
+    DashboardPanel._latestReport = report;
     this._panel.webview.postMessage({ type: 'report', data: report });
   }
 
@@ -99,6 +111,7 @@ export class DashboardPanel {
   }
 
   public sendStatus(status: string) {
+    DashboardPanel._latestStatus = status;
     this._panel.webview.postMessage({ type: 'status', data: status });
   }
 
@@ -122,8 +135,8 @@ export class DashboardPanel {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GoMeter Live Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -234,7 +247,20 @@ export class DashboardPanel {
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 16px;
-      height: 240px;
+      height: 220px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-wrapper {
+      flex: 1;
+      width: 100%;
+      position: relative;
+      min-height: 160px;
+    }
+    canvas#liveLatencyChart {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
     .table-box {
       background: var(--card);
@@ -451,7 +477,9 @@ export class DashboardPanel {
   <div class="charts">
     <div class="chart-box">
       <div class="card-label">Real-Time Response Latency Timeline (ms)</div>
-      <canvas id="liveLatencyChart" style="max-height: 190px;"></canvas>
+      <div class="chart-wrapper">
+        <canvas id="liveLatencyChart"></canvas>
+      </div>
     </div>
   </div>
 
@@ -584,50 +612,10 @@ export class DashboardPanel {
   <script>
     const vscode = acquireVsCodeApi();
 
-    let totalCount = 0;
-    let successCount = 0;
-    let failCount = 0;
-    let totalLatencySum = 0;
-    let allLatencies = [];
-    let testStartTime = null;
-    let liveEndpoints = {};
-    const maxDataPoints = 40;
-    const inspectedRequests = [];
-    let runHistoryList = [];
-
-    // Charts: Latency Timeline
-    const latencyCtx = document.getElementById('liveLatencyChart');
-    const latencyChart = new Chart(latencyCtx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          label: 'Latency (ms)',
-          data: [],
-          borderColor: '#38bdf8',
-          backgroundColor: 'rgba(56, 189, 248, 0.12)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 2,
-          pointBackgroundColor: '#38bdf8'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { display: false },
-          y: {
-            grid: { color: '#334155' },
-            ticks: { color: '#94a3b8' }
-          }
-        }
-      }
-    });
-
+    // 1. Immediately register message listener at the very top of script
     window.addEventListener('message', event => {
       const msg = event.data;
+      if (!msg) return;
       if (msg.type === 'metric') {
         handleMetric(msg.data);
       } else if (msg.type === 'report') {
@@ -641,8 +629,112 @@ export class DashboardPanel {
       }
     });
 
-    // Request history on load
-    vscode.postMessage({ command: 'getHistory' });
+    // Notify extension that webview is mounted and ready for data
+    vscode.postMessage({ command: 'ready' });
+
+    let totalCount = 0;
+    let successCount = 0;
+    let failCount = 0;
+    let totalLatencySum = 0;
+    let allLatencies = [];
+    let testStartTime = null;
+    let liveEndpoints = {};
+    const maxDataPoints = 40;
+    const latencyHistory = [];
+    const inspectedRequests = [];
+    let runHistoryList = [];
+
+    // Native HTML5 Canvas Line Chart (Dependency-free & 100% Offline-Safe)
+    function renderNativeLatencyChart() {
+      const canvas = document.getElementById('liveLatencyChart');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Grid lines
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let y = 30; y < h - 15; y += 38) {
+        ctx.moveTo(35, y);
+        ctx.lineTo(w - 10, y);
+      }
+      ctx.stroke();
+
+      if (latencyHistory.length === 0) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '12px sans-serif';
+        ctx.fillText('Awaiting latency metrics...', 40, h / 2);
+        return;
+      }
+
+      const maxVal = Math.max(10, ...latencyHistory) * 1.15;
+
+      // Y-axis labels
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px monospace';
+      ctx.fillText(maxVal.toFixed(0) + 'ms', 4, 30);
+      ctx.fillText((maxVal / 2).toFixed(0) + 'ms', 4, h / 2);
+      ctx.fillText('0ms', 12, h - 18);
+
+      const startX = 40;
+      const plotW = w - startX - 10;
+      const stepX = latencyHistory.length > 1 ? plotW / (latencyHistory.length - 1) : plotW;
+
+      // Gradient Fill
+      ctx.beginPath();
+      latencyHistory.forEach((val, i) => {
+        const x = startX + i * stepX;
+        const y = h - 20 - (val / maxVal) * (h - 45);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      const lastX = startX + (latencyHistory.length - 1) * stepX;
+      ctx.lineTo(lastX, h - 20);
+      ctx.lineTo(startX, h - 20);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+      grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Line Stroke
+      ctx.beginPath();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      latencyHistory.forEach((val, i) => {
+        const x = startX + i * stepX;
+        const y = h - 20 - (val / maxVal) * (h - 45);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Data Points
+      ctx.fillStyle = '#38bdf8';
+      latencyHistory.forEach((val, i) => {
+        const x = startX + i * stepX;
+        const y = h - 20 - (val / maxVal) * (h - 45);
+        ctx.beginPath();
+        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    window.addEventListener('resize', () => {
+      renderNativeLatencyChart();
+    });
 
     function resetLiveMetrics() {
       totalCount = 0;
@@ -652,6 +744,7 @@ export class DashboardPanel {
       allLatencies = [];
       testStartTime = Date.now();
       liveEndpoints = {};
+      latencyHistory.length = 0;
       inspectedRequests.length = 0;
       document.getElementById('valTotal').innerText = '0';
       document.getElementById('valRPS').innerText = '0.0';
@@ -661,9 +754,7 @@ export class DashboardPanel {
       document.getElementById('inspectorCounter').innerText = '0 inspected';
       document.getElementById('requestInspectorBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting live requests...</td></tr>';
       document.getElementById('endpointTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting endpoint stats...</td></tr>';
-      latencyChart.data.labels = [];
-      latencyChart.data.datasets[0].data = [];
-      latencyChart.update();
+      renderNativeLatencyChart();
     }
 
     function updateStatus(status) {
@@ -703,11 +794,9 @@ export class DashboardPanel {
       if (val === undefined || val === null) return '0.0ms';
       const num = Number(val);
       if (isNaN(num)) return String(val);
-      // Nanoseconds (> 1,000,000)
       if (num >= 1000000) {
         return (num / 1000000).toFixed(1) + 'ms';
       }
-      // Microseconds
       if (num >= 1000) {
         return (num / 1000).toFixed(1) + 'ms';
       }
@@ -738,14 +827,12 @@ export class DashboardPanel {
       // Live p95 Latency
       document.getElementById('valP95').innerText = calculateP95(allLatencies).toFixed(1) + 'ms';
 
-      // Update line chart
-      latencyChart.data.labels.push('');
-      latencyChart.data.datasets[0].data.push(lat);
-      if (latencyChart.data.labels.length > maxDataPoints) {
-        latencyChart.data.labels.shift();
-        latencyChart.data.datasets[0].data.shift();
+      // Update native timeline chart
+      latencyHistory.push(lat);
+      if (latencyHistory.length > maxDataPoints) {
+        latencyHistory.shift();
       }
-      latencyChart.update('none');
+      renderNativeLatencyChart();
 
       // Update live endpoint aggregation
       updateLiveEndpoint(m);

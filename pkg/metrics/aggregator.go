@@ -150,6 +150,9 @@ func (a *Aggregator) Record(m RequestMetric) {
 
 // GenerateReport produces the complete Report
 func (a *Aggregator) GenerateReport(plan *config.TestPlan, now time.Time) *Report {
+	if a.startTime.IsZero() {
+		a.startTime = now
+	}
 	if a.endTime.IsZero() {
 		a.endTime = now
 	}

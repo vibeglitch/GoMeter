@@ -436,6 +436,78 @@ export class DashboardPanel {
     }
     .card-label { font-size: 12px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
     .card-val { font-size: 24px; font-weight: 700; }
+    /* SLA Quality Gates Panel */
+    .thresholds-panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      transition: all 0.2s ease;
+    }
+    .thresholds-panel.breached {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, var(--card) 100%);
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.1);
+    }
+    .thresholds-panel.passed {
+      border-color: rgba(34, 197, 94, 0.4);
+      background: linear-gradient(180deg, rgba(34, 197, 94, 0.06) 0%, var(--card) 100%);
+    }
+    .thresholds-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .thresholds-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thresholds-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 10px;
+    }
+    .threshold-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .threshold-card.pass {
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+    .threshold-card.fail {
+      border-color: rgba(239, 68, 68, 0.45);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .threshold-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .threshold-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+    .threshold-condition {
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .threshold-value {
+      font-size: 13px;
+      font-weight: 700;
+    }
     .charts {
       display: grid;
       grid-template-columns: 1fr;
@@ -715,6 +787,18 @@ export class DashboardPanel {
     </div>
   </div>
 
+  <!-- SLA Quality Gates & Thresholds Panel -->
+  <div id="thresholdsPanel" class="thresholds-panel" style="display: none;">
+    <div class="thresholds-header">
+      <div class="thresholds-title">
+        <span id="thresholdStatusIcon" style="font-size: 16px;">⚖️</span>
+        <span style="font-weight: 700; font-size: 14px;">SLA Thresholds &amp; Quality Gates</span>
+      </div>
+      <div id="thresholdSummaryBadge" class="badge-status">0 / 0 Evaluated</div>
+    </div>
+    <div id="thresholdsList" class="thresholds-grid"></div>
+  </div>
+
   <div class="charts">
     <div class="chart-box">
       <div class="card-label">Real-Time Response Latency Timeline (ms)</div>
@@ -987,6 +1071,8 @@ export class DashboardPanel {
       liveEndpoints = {};
       latencyHistory.length = 0;
       inspectedRequests.length = 0;
+      const thPanel = document.getElementById('thresholdsPanel');
+      if (thPanel) thPanel.style.display = 'none';
       document.getElementById('valTotal').innerText = '0';
       document.getElementById('valRPS').innerText = '0.0';
       document.getElementById('valSuccessRate').innerText = '100%';
@@ -1254,6 +1340,54 @@ export class DashboardPanel {
           inspectedRequests.push(sampleMetric);
           renderInspectorRow(sampleMetric);
         });
+      }
+
+      // Render SLA Thresholds & Quality Gates
+      const thPanel = document.getElementById('thresholdsPanel');
+      const thList = document.getElementById('thresholdsList');
+      const thBadge = document.getElementById('thresholdSummaryBadge');
+      const thIcon = document.getElementById('thresholdStatusIcon');
+
+      if (thPanel && thList && r.thresholds && Array.isArray(r.thresholds) && r.thresholds.length > 0) {
+        thPanel.style.display = 'block';
+        thList.innerHTML = '';
+        const breached = r.thresholds.filter(t => !t.passed);
+        const allPassed = breached.length === 0;
+
+        thPanel.className = 'thresholds-panel ' + (allPassed ? 'passed' : 'breached');
+        if (thIcon) thIcon.innerText = allPassed ? '✅' : '⚠️';
+        if (thBadge) {
+          thBadge.className = 'badge-status ' + (allPassed ? 'badge-2xx' : 'badge-err');
+          thBadge.innerText = allPassed
+            ? (r.thresholds.length + '/' + r.thresholds.length + ' PASSED')
+            : (breached.length + ' BREACHED (' + (r.thresholds.length - breached.length) + '/' + r.thresholds.length + ' PASSED)');
+        }
+
+        r.thresholds.forEach(t => {
+          const card = document.createElement('div');
+          card.className = 'threshold-card ' + (t.passed ? 'pass' : 'fail');
+          const metricLabel = (t.metric || '').replace(/_/g, ' ');
+          const actualVal = typeof t.actual === 'number' ? Number(t.actual).toFixed(1) : t.actual;
+          const actualDisplay = actualVal + (t.unit || '');
+          const expectedDisplay = (t.operator || '') + ' ' + t.expected + (t.unit || '');
+          const valColor = t.passed ? '#4ade80' : '#f87171';
+          const passTag = t.passed
+            ? '<span class="badge-status badge-2xx" style="font-size:10px;">PASS</span>'
+            : '<span class="badge-status badge-err" style="font-size:10px;">FAIL</span>';
+
+          card.innerHTML =
+            '<div class="threshold-info">' +
+              '<div class="threshold-name">' + metricLabel + '</div>' +
+              '<div class="threshold-condition">Target: ' + expectedDisplay + '</div>' +
+            '</div>' +
+            '<div style="display:flex; align-items:center; gap:8px;">' +
+              '<div class="threshold-value" style="color:' + valColor + ';">' + actualDisplay + '</div>' +
+              passTag +
+            '</div>';
+          thList.appendChild(card);
+        });
+      } else if (thPanel) {
+        thPanel.style.display = 'none';
       }
 
       // Refresh history list so this completed run appears immediately

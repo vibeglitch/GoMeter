@@ -112,7 +112,18 @@ async function executeTest(
         } else {
           panel.sendStatus('FAILED');
           statusBarItem.text = '$(error) GoMeter: Failed';
-          const msg = res.error || (res.report && !res.report.passed ? 'SLA thresholds breached' : 'Execution error');
+
+          let detail = res.error;
+          if (res.report && Array.isArray(res.report.thresholds)) {
+            const breached = res.report.thresholds.filter((t: any) => !t.passed);
+            if (breached.length > 0) {
+              detail = 'SLA Breached: ' + breached.map((t: any) =>
+                `${t.metric} was ${typeof t.actual === 'number' ? Number(t.actual).toFixed(1) : t.actual}${t.unit || ''} (expected ${t.operator} ${t.expected}${t.unit || ''})`
+              ).join('; ');
+            }
+          }
+
+          const msg = detail || (res.report && !res.report.passed ? 'SLA thresholds breached' : 'Execution error');
           vscode.window.showErrorMessage(`GoMeter test failed: ${msg}`);
         }
       }

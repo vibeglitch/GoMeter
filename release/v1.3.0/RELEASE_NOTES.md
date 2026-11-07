@@ -16,3 +16,4 @@
   - Real-time indicator: displays a pulsing live dot with a `LIVE` tag during active tests.
   - Rich Run Item Cards: displays test plan name, formatted timestamp, run ID, pass/fail status badge, total request counts, throughput (RPS), and latency percentiles.
   - Synchronized selection across the dashboard, live chart, metrics summary, and historical runs table.
+

@@ -13,7 +13,7 @@ variables:
 scenarios:
   - name: "JSONPlaceholder CRUD Operations"
     virtual_users: 5
-    duration: "4s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "50ms"
     requests:
@@ -72,7 +72,7 @@ scenarios:
 
   - name: "DummyJSON Product Catalog"
     virtual_users: 4
-    duration: "4s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "100ms"
     requests:
@@ -92,7 +92,7 @@ scenarios:
 
   - name: "HttpBin Echo & Validation"
     virtual_users: 3
-    duration: "4s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "50ms"
     requests:

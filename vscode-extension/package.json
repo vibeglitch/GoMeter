@@ -2,7 +2,7 @@
   "name": "gometer",
   "displayName": "GoMeter - High Performance API Testing & Load Testing",
   "description": "Go-powered JMeter alternative for API testing, load testing, real-time metrics, LLM generation, and MCP support.",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publisher": "naveen",
   "repository": {
     "type": "git",

@@ -757,7 +757,10 @@ export class DashboardPanel {
       renderNativeLatencyChart();
     }
 
+    let currentStatus = 'Ready';
+
     function updateStatus(status) {
+      currentStatus = status;
       const badge = document.getElementById('statusBadge');
       badge.innerText = status;
       const btnStop = document.getElementById('btnStop');
@@ -929,7 +932,9 @@ export class DashboardPanel {
 
     function handleFinalReport(r) {
       if (!r) return;
-      updateStatus(r.passed ? 'PASSED' : 'FAILED');
+      if (currentStatus !== 'STOPPED') {
+        updateStatus(r.passed ? 'PASSED' : 'FAILED');
+      }
 
       if (r.total_requests !== undefined) {
         document.getElementById('valTotal').innerText = r.total_requests;

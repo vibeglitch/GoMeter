@@ -1,22 +1,35 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 import { GoMeterBridge } from '../services/gometerBridge';
 import { DashboardPanel } from '../views/dashboardPanel';
 import { TestPlanItem } from '../providers/testPlanTreeProvider';
+
+let lastExecutedFilePath: string | undefined;
 
 export async function registerRunTestCommand(
   context: vscode.ExtensionContext,
   bridge: GoMeterBridge,
   statusBarItem: vscode.StatusBarItem
 ) {
-  // Command 1: Run active test plan in editor
+  // Command 1: Run active test plan in editor or re-run last active plan
   context.subscriptions.push(
     vscode.commands.registerCommand('gometer.runActiveTest', async () => {
+      let targetPath: string | undefined;
       const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage('No active file open in the editor.');
+      if (editor && (editor.document.uri.fsPath.endsWith('.yaml') || editor.document.uri.fsPath.endsWith('.yml'))) {
+        targetPath = editor.document.uri.fsPath;
+      } else if (lastExecutedFilePath && fs.existsSync(lastExecutedFilePath)) {
+        targetPath = lastExecutedFilePath;
+      } else if (editor) {
+        targetPath = editor.document.uri.fsPath;
+      }
+
+      if (!targetPath) {
+        vscode.window.showErrorMessage('No active test plan open in editor and no previous run found.');
         return;
       }
-      await executeTest(editor.document.uri.fsPath, context, bridge, statusBarItem);
+      await executeTest(targetPath, context, bridge, statusBarItem);
     })
   );
 
@@ -41,7 +54,7 @@ export async function registerRunTestCommand(
           DashboardPanel.currentPanel.sendStatus('STOPPED');
         }
       } else {
-        vscode.window.showInformationMessage('No active GoMeter test is currently running.');
+        vscode.window.showInformationMessage('No active GoMeter test is currently running (test has already completed).');
       }
     })
   );
@@ -53,6 +66,7 @@ async function executeTest(
   bridge: GoMeterBridge,
   statusBarItem: vscode.StatusBarItem
 ) {
+  lastExecutedFilePath = filePath;
   const panel = DashboardPanel.createOrShow(context.extensionUri, bridge);
   panel.sendStatus('RUNNING');
   statusBarItem.text = '$(sync~spin) GoMeter: Running...';
@@ -61,7 +75,7 @@ async function executeTest(
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `GoMeter: Running ${filePath}`,
+      title: `GoMeter: Running ${path.basename(filePath)}`,
       cancellable: true,
     },
     async (progress, token) => {
@@ -85,12 +99,18 @@ async function executeTest(
       }
       panel.sendHistory(bridge.getRunHistory());
 
-      if (res.success) {
+      if (res.stopped) {
+        panel.sendStatus('STOPPED');
+        statusBarItem.text = '$(circle-slash) GoMeter: Stopped';
+        vscode.window.showInformationMessage('GoMeter test run was stopped by user.');
+      } else if (res.success) {
+        panel.sendStatus('PASSED');
         statusBarItem.text = '$(check) GoMeter: Passed';
         vscode.window.showInformationMessage(
           `GoMeter test passed! Total: ${res.report?.total_requests || 0} reqs @ ${res.report?.requests_per_second || 0} RPS`
         );
       } else {
+        panel.sendStatus('FAILED');
         statusBarItem.text = '$(error) GoMeter: Failed';
         const msg = res.error || (res.report && !res.report.passed ? 'SLA thresholds breached' : 'Execution error');
         vscode.window.showErrorMessage(`GoMeter test failed: ${msg}`);

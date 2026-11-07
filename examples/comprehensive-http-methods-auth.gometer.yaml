@@ -18,7 +18,7 @@ scenarios:
   # =========================================================================
   - name: "JWT Auth & Protected Endpoints Lifecycle"
     virtual_users: 2
-    duration: "10s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "50ms"
     requests:
@@ -86,7 +86,7 @@ scenarios:
   # =========================================================================
   - name: "Full RESTful CRUD Operations"
     virtual_users: 2
-    duration: "10s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "50ms"
     requests:
@@ -176,7 +176,7 @@ scenarios:
   # =========================================================================
   - name: "Protocol Verbs & CORS Handshake"
     virtual_users: 2
-    duration: "10s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "50ms"
     requests:
@@ -208,7 +208,7 @@ scenarios:
   # =========================================================================
   - name: "Negative Assertions & Error Verification"
     virtual_users: 2
-    duration: "10s"
+    duration: "20s"
     ramp_up: "1s"
     think_time: "50ms"
     requests:

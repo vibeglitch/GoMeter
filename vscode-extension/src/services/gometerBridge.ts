@@ -26,10 +26,13 @@ export interface RunTestResult {
   report?: any;
   output: string;
   error?: string;
+  stopped?: boolean;
 }
 
 export class GoMeterBridge {
   private activeProcess: cp.ChildProcess | null = null;
+  private isRunning: boolean = false;
+  private wasStopped: boolean = false;
   private extensionContext?: vscode.ExtensionContext;
 
   constructor(context?: vscode.ExtensionContext) {
@@ -127,6 +130,8 @@ export class GoMeterBridge {
       const args = ['run', filePath, '--output', 'json', '--verbose'];
       const proc = cp.spawn(binary, args, { cwd });
       this.activeProcess = proc;
+      this.isRunning = true;
+      this.wasStopped = false;
 
       let stdout = '';
       let stderr = '';
@@ -164,14 +169,15 @@ export class GoMeterBridge {
       });
 
       const cancelRegistration = token.onCancellationRequested(() => {
-        if (this.activeProcess) {
-          this.activeProcess.kill('SIGTERM');
-        }
+        this.stopActiveTest();
       });
 
-      proc.on('close', (code) => {
+      proc.on('close', (code, signal) => {
         cancelRegistration.dispose();
+        const wasStopped = this.wasStopped || signal === 'SIGTERM';
         this.activeProcess = null;
+        this.isRunning = false;
+        this.wasStopped = false;
 
         // If report wasn't parsed from live stream, read reports/latest.json
         if (!report) {
@@ -204,7 +210,14 @@ export class GoMeterBridge {
           }
         }
 
-        if (code === 0 || code === 2) {
+        if (wasStopped) {
+          resolve({
+            success: false,
+            stopped: true,
+            report,
+            output: stdout,
+          });
+        } else if (code === 0 || code === 2) {
           resolve({
             success: code === 0,
             report,
@@ -226,9 +239,17 @@ export class GoMeterBridge {
    * Stop active running test
    */
   public stopActiveTest(): boolean {
-    if (this.activeProcess) {
-      this.activeProcess.kill('SIGTERM');
-      this.activeProcess = null;
+    if (this.activeProcess && this.isRunning) {
+      this.wasStopped = true;
+      try {
+        this.activeProcess.kill('SIGTERM');
+      } catch {
+        try {
+          this.activeProcess.kill('SIGKILL');
+        } catch {
+          // Process already terminated
+        }
+      }
       return true;
     }
     return false;

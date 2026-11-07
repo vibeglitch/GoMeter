@@ -45,3 +45,4 @@ GoMeter v1.1.0 is a feature release that introduces real-time request inspection
 - `gometer-v1.1.0-windows-amd64.zip` — Windows amd64 binary (`gometer.exe`)
 - `gometer-v1.1.0-darwin-amd64.tar.gz` — macOS Intel binary
 - `gometer-v1.1.0-darwin-arm64.tar.gz` — macOS Apple Silicon binary
+

@@ -78,16 +78,21 @@ Or over streamable HTTP:
 ## VS Code Extension (VSIX)
 
 The VS Code extension provides:
-1. **Explorer Sidebar**: Browse and run test plans directly from the activity bar.
-2. **Live Dashboard**: Real-time throughput (RPS), response latency line charts, and status breakdowns.
-3. **AI Generation**: Generate complete test plans from natural language prompts using Copilot.
-4. **AI Bottleneck Analysis**: Ask LLMs to analyze test results and suggest backend optimizations.
+1. **Explorer Sidebar**: Browse, inspect, and run test plans directly from the Activity Bar.
+2. **Live Dashboard & Controls**: Real-time throughput (RPS), full-width latency timeline, and a **`⏹ Stop Test`** button to safely abort running tests.
+3. **Live Request & Response Inspector**: Click any row in the live execution table to inspect full request headers, payload body, response headers, syntax-highlighted response body, and assertion validation checklists.
+4. **AI Generation**: Generate complete test plans from natural language prompts using IDE LLMs (`vscode.lm`).
+5. **AI Bottleneck Analysis**: Ask LLMs to diagnose test results and suggest backend optimizations.
+6. **Self-Contained (Zero Dependencies)**: Bundles static standalone precompiled binaries for Linux and Windows—users do **not** need Go, Node.js, or npm installed.
 
 ### Install VSIX
 
 ```bash
-code --install-extension vscode-extension/gometer-1.0.0.vsix
+# Install the latest self-contained extension (v1.1.0)
+code --install-extension release/v1.1.0/gometer-1.1.0.vsix
 ```
+
+All releases and historical versions are preserved in the [`release/`](release/) directory.
 
 ---
 

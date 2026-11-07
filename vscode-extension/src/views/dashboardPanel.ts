@@ -185,23 +185,223 @@ export class DashboardPanel {
       background: rgba(56, 189, 248, 0.2);
       color: var(--primary);
     }
-    .history-selector {
-      display: flex;
+    /* Modern Run Selector Dropdown */
+    .run-dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .run-dropdown-trigger {
+      display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 9px;
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 3px 8px;
-    }
-    .history-selector select {
-      background: transparent;
-      color: var(--text);
-      border: none;
-      outline: none;
-      font-size: 13px;
+      border-radius: 8px;
+      padding: 6px 14px;
       cursor: pointer;
-      max-width: 220px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      font-size: 13px;
+      color: var(--text);
+    }
+    .run-dropdown-trigger:hover {
+      border-color: var(--primary);
+      background: var(--card-hover);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    }
+    .run-dropdown-trigger.active {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+    }
+    .run-dropdown-prefix {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-weight: 700;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .run-dropdown-current {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-weight: 600;
+      color: var(--text);
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 8px #10b981;
+      display: inline-block;
+      flex-shrink: 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .chevron-icon {
+      margin-left: 3px;
+      color: var(--muted);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+    .run-dropdown-trigger.active .chevron-icon {
+      transform: rotate(180deg);
+      color: var(--primary);
+    }
+
+    /* Floating Popover Menu */
+    .run-dropdown-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      min-width: 380px;
+      max-width: 480px;
+      max-height: 420px;
+      background: #182234;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      z-index: 1000;
+      overflow-y: auto;
+      display: none;
+      padding: 8px;
+      backdrop-filter: blur(8px);
+      animation: dropdownFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes dropdownFadeIn {
+      from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .run-dropdown-menu.show {
+      display: block;
+    }
+    .run-dropdown-header {
+      padding: 6px 10px 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      margin-bottom: 6px;
+    }
+    .run-dropdown-header span {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+    }
+    .run-dropdown-header .count-badge {
+      font-size: 11px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+    .run-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 3px;
+      border: 1px solid transparent;
+    }
+    .run-item:hover {
+      background: var(--card-hover);
+      border-color: rgba(56, 189, 248, 0.2);
+    }
+    .run-item.selected {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+    .run-item-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+    .run-item-status-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .run-item-status-pass {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+    .run-item-status-fail {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }
+    .run-item-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .run-item-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .run-item-subtitle {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .run-item-metrics {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .run-item-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+    }
+    .run-item-rps {
+      font-size: 11px;
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .run-dropdown-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.07);
+      margin: 6px 4px;
     }
     .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     button {
@@ -437,9 +637,50 @@ export class DashboardPanel {
     <div class="title-group">
       <div class="brand">⚡ GoMeter</div>
       <div id="statusBadge" class="status-badge">Ready</div>
-      <div class="history-selector">
-        <label for="historySelect" style="font-size: 12px; color: var(--muted); font-weight: 600;">View Run:</label>
-        <select id="historySelect" onchange="onSelectRun(this.value)">
+      <div class="run-dropdown-wrapper">
+        <button id="runDropdownBtn" class="run-dropdown-trigger" onclick="toggleRunDropdown(event)" type="button" aria-haspopup="listbox" aria-expanded="false">
+          <span class="run-dropdown-prefix">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Run:
+          </span>
+          <span id="selectedRunDisplay" class="run-dropdown-current">
+            <span class="pulse-dot"></span> Current / Live Test
+          </span>
+          <svg class="chevron-icon" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+
+        <!-- Floating Popover Menu -->
+        <div id="runDropdownMenu" class="run-dropdown-menu" role="listbox">
+          <div class="run-dropdown-header">
+            <span>Execution Runs</span>
+            <span id="runsCountBadge" class="count-badge">Live</span>
+          </div>
+          <!-- Live Run Option -->
+          <div id="runItemLive" class="run-item selected" onclick="selectCustomRun('live')">
+            <div class="run-item-left">
+              <span class="pulse-dot"></span>
+              <div class="run-item-details">
+                <div class="run-item-title">Current / Live Test</div>
+                <div class="run-item-subtitle">Real-time metrics stream &amp; active telemetry</div>
+              </div>
+            </div>
+            <div class="run-item-metrics">
+              <span class="run-item-badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; font-weight: 700;">LIVE</span>
+            </div>
+          </div>
+          <div class="run-dropdown-divider"></div>
+          <div id="historicalRunsList">
+            <div style="padding: 12px; text-align: center; color: var(--muted); font-size: 12px;">No past runs yet</div>
+          </div>
+        </div>
+
+        <!-- Hidden native select kept for full backward compatibility -->
+        <select id="historySelect" style="display: none;" onchange="onSelectRun(this.value)">
           <option value="live">● Current / Live Test</option>
         </select>
       </div>
@@ -1019,9 +1260,128 @@ export class DashboardPanel {
       vscode.postMessage({ command: 'getHistory' });
     }
 
+    let currentSelectedRunId = 'live';
+
+    function toggleRunDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('runDropdownMenu');
+      const btn = document.getElementById('runDropdownBtn');
+      if (!menu || !btn) return;
+      const isOpen = menu.classList.contains('show');
+      if (isOpen) {
+        closeRunDropdown();
+      } else {
+        menu.classList.add('show');
+        btn.classList.add('active');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    function closeRunDropdown() {
+      const menu = document.getElementById('runDropdownMenu');
+      const btn = document.getElementById('runDropdownBtn');
+      if (menu) menu.classList.remove('show');
+      if (btn) {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    }
+
+    window.addEventListener('click', (e) => {
+      const wrapper = document.querySelector('.run-dropdown-wrapper');
+      if (wrapper && !wrapper.contains(e.target)) {
+        closeRunDropdown();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeRunDropdown();
+      }
+    });
+
+    function selectCustomRun(runId) {
+      currentSelectedRunId = runId;
+      updateSelectedRunDisplay(runId);
+      closeRunDropdown();
+      onSelectRun(runId);
+    }
+
+    function updateSelectedRunDisplay(runId) {
+      currentSelectedRunId = runId;
+      const display = document.getElementById('selectedRunDisplay');
+      if (!display) return;
+
+      if (runId === 'live') {
+        display.innerHTML = '<span class="pulse-dot"></span> Current / Live Test';
+      } else {
+        const h = runHistoryList.find(x => x.id === runId);
+        if (h) {
+          const timeStr = h.timestamp ? new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : runId;
+          const statusColor = h.passed ? '#4ade80' : '#f87171';
+          const statusIcon = h.passed ? '✓' : '✗';
+          display.innerHTML = '<span style="color: ' + statusColor + '; font-weight: 800; font-size: 13px;">' + statusIcon + '</span> <span style="font-weight: 600;">' + (h.test_name || 'Test Run') + '</span> <span style="color: var(--muted); font-size: 11px;">(' + timeStr + ')</span>';
+        } else {
+          display.innerHTML = '<span style="color: var(--primary);">📊 ' + runId + '</span>';
+        }
+      }
+
+      // Update selected classes in dropdown list
+      document.querySelectorAll('#runDropdownMenu .run-item').forEach(el => el.classList.remove('selected'));
+      if (runId === 'live') {
+        const liveEl = document.getElementById('runItemLive');
+        if (liveEl) liveEl.classList.add('selected');
+      } else {
+        const itemEl = document.getElementById('runItem_' + runId);
+        if (itemEl) itemEl.classList.add('selected');
+      }
+    }
+
     function handleHistory(history) {
       if (!Array.isArray(history)) return;
       runHistoryList = history;
+
+      // Update Count Badge
+      const countBadge = document.getElementById('runsCountBadge');
+      if (countBadge) {
+        countBadge.innerText = history.length > 0 ? (history.length + ' runs') : 'Live';
+      }
+
+      // Populate Custom Dropdown Menu
+      const runsListContainer = document.getElementById('historicalRunsList');
+      if (runsListContainer) {
+        if (history.length === 0) {
+          runsListContainer.innerHTML = '<div style="padding: 14px; text-align: center; color: var(--muted); font-size: 12px;">No historical runs recorded yet</div>';
+        } else {
+          runsListContainer.innerHTML = '';
+          history.forEach(h => {
+            const timeDisplay = h.timestamp ? new Date(h.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : h.id;
+            const statusCls = h.passed ? 'run-item-status-pass' : 'run-item-status-fail';
+            const statusIcon = h.passed ? '✓' : '✗';
+            const isSelected = h.id === currentSelectedRunId ? 'selected' : '';
+            const rpsStr = h.rps !== undefined ? Number(h.rps).toFixed(1) + ' RPS' : '';
+            const reqsStr = (h.total_requests || 0) + ' reqs';
+
+            const itemDiv = document.createElement('div');
+            itemDiv.id = 'runItem_' + h.id;
+            itemDiv.className = 'run-item ' + isSelected;
+            itemDiv.onclick = () => selectCustomRun(h.id);
+            itemDiv.innerHTML =
+              '<div class="run-item-left">' +
+                '<div class="run-item-status-icon ' + statusCls + '">' + statusIcon + '</div>' +
+                '<div class="run-item-details">' +
+                  '<div class="run-item-title" title="' + (h.test_name || 'Test Plan') + '">' + (h.test_name || 'Test Plan') + '</div>' +
+                  '<div class="run-item-subtitle">' + timeDisplay + ' · ' + h.id + '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div class="run-item-metrics">' +
+                '<span class="run-item-badge">' + reqsStr + '</span>' +
+                (rpsStr ? '<span class="run-item-rps">' + rpsStr + '</span>' : '') +
+              '</div>';
+            runsListContainer.appendChild(itemDiv);
+          });
+        }
+      }
 
       // Populate Run Selector dropdown
       const sel = document.getElementById('historySelect');
@@ -1073,6 +1433,8 @@ export class DashboardPanel {
 
     function onSelectRun(runId) {
       if (runId === 'live') {
+        currentSelectedRunId = 'live';
+        updateSelectedRunDisplay('live');
         updateStatus('Ready');
       } else {
         loadRunReport(runId);
@@ -1080,7 +1442,10 @@ export class DashboardPanel {
     }
 
     function loadRunReport(runId) {
-      document.getElementById('historySelect').value = runId;
+      currentSelectedRunId = runId;
+      updateSelectedRunDisplay(runId);
+      const sel = document.getElementById('historySelect');
+      if (sel) sel.value = runId;
       vscode.postMessage({ command: 'loadRun', runId: runId });
     }
 

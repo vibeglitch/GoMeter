@@ -17,20 +17,20 @@ export async function registerRunTestCommand(
     vscode.commands.registerCommand('gometer.runActiveTest', async () => {
       let targetPath: string | undefined;
       const editor = vscode.window.activeTextEditor;
-      if (editor && (editor.document.uri.fsPath.endsWith('.yaml') || editor.document.uri.fsPath.endsWith('.yml'))) {
-        targetPath = editor.document.uri.fsPath;
-      } else if (lastExecutedFilePath && fs.existsSync(lastExecutedFilePath)) {
-        targetPath = lastExecutedFilePath;
-      } else if (editor) {
-        targetPath = editor.document.uri.fsPath;
-      }
+        if (editor && (editor.document.uri.fsPath.endsWith('.yaml') || editor.document.uri.fsPath.endsWith('.yml'))) {
+          targetPath = editor.document.uri.fsPath;
+        } else if (lastExecutedFilePath && fs.existsSync(lastExecutedFilePath)) {
+          targetPath = lastExecutedFilePath;
+        } else if (editor) {
+          targetPath = editor.document.uri.fsPath;
+        }
 
-      if (!targetPath) {
-        vscode.window.showErrorMessage('No active test plan open in editor and no previous run found.');
-        return;
-      }
-      await executeTest(targetPath, context, bridge, statusBarItem);
-    })
+        if (!targetPath) {
+          vscode.window.showErrorMessage('No active test plan open in editor and no previous run found.');
+          return;
+        }
+        await executeTest(targetPath, context, bridge, statusBarItem);
+      })
   );
 
   // Command 2: Run test from tree view
@@ -99,23 +99,23 @@ async function executeTest(
       }
       panel.sendHistory(bridge.getRunHistory());
 
-      if (res.stopped) {
-        panel.sendStatus('STOPPED');
-        statusBarItem.text = '$(circle-slash) GoMeter: Stopped';
-        vscode.window.showInformationMessage('GoMeter test run was stopped by user.');
-      } else if (res.success) {
-        panel.sendStatus('PASSED');
-        statusBarItem.text = '$(check) GoMeter: Passed';
-        vscode.window.showInformationMessage(
-          `GoMeter test passed! Total: ${res.report?.total_requests || 0} reqs @ ${res.report?.requests_per_second || 0} RPS`
-        );
-      } else {
-        panel.sendStatus('FAILED');
-        statusBarItem.text = '$(error) GoMeter: Failed';
-        const msg = res.error || (res.report && !res.report.passed ? 'SLA thresholds breached' : 'Execution error');
-        vscode.window.showErrorMessage(`GoMeter test failed: ${msg}`);
+        if (res.stopped) {
+          panel.sendStatus('STOPPED');
+          statusBarItem.text = '$(circle-slash) GoMeter: Stopped';
+          vscode.window.showInformationMessage('GoMeter test run was stopped by user.');
+        } else if (res.success) {
+          panel.sendStatus('PASSED');
+          statusBarItem.text = '$(check) GoMeter: Passed';
+          vscode.window.showInformationMessage(
+            `GoMeter test passed! Total: ${res.report?.total_requests || 0} reqs @ ${res.report?.requests_per_second || 0} RPS`
+          );
+        } else {
+          panel.sendStatus('FAILED');
+          statusBarItem.text = '$(error) GoMeter: Failed';
+          const msg = res.error || (res.report && !res.report.passed ? 'SLA thresholds breached' : 'Execution error');
+          vscode.window.showErrorMessage(`GoMeter test failed: ${msg}`);
+        }
       }
-    }
   );
 }
 

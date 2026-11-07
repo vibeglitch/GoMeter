@@ -2,6 +2,58 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+const IGNORED_DIRS = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'bin',
+  '.tools',
+  'vendor',
+  'reports',
+  '.gemini',
+  '.vscode',
+  'coverage',
+]);
+
+function isGoMeterTestFile(filePath: string): boolean {
+  try {
+    if (!fs.existsSync(filePath)) return false;
+    const stat = fs.statSync(filePath);
+    if (!stat.isFile()) return false;
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext !== '.yaml' && ext !== '.yml') return false;
+
+    const base = path.basename(filePath).toLowerCase();
+    if (base.includes('.gometer.')) return true;
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    return content.includes('scenarios') && (content.includes('base_url') || content.includes('defaults'));
+  } catch {
+    return false;
+  }
+}
+
+function containsTestPlans(dirPath: string): boolean {
+  try {
+    if (!fs.existsSync(dirPath)) return false;
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || IGNORED_DIRS.has(entry.name)) {
+        continue;
+      }
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        if (containsTestPlans(fullPath)) return true;
+      } else if (entry.isFile()) {
+        if (isGoMeterTestFile(fullPath)) return true;
+      }
+    }
+  } catch {
+    // Ignore filesystem read errors
+  }
+  return false;
+}
+
 export class TestPlanItem extends vscode.TreeItem {
   constructor(
     public readonly label: string,
@@ -10,8 +62,8 @@ export class TestPlanItem extends vscode.TreeItem {
     public readonly isFolder: boolean = false
   ) {
     super(label, collapsibleState);
+    this.resourceUri = vscode.Uri.file(filePath);
     this.tooltip = filePath;
-    this.description = path.basename(path.dirname(filePath));
 
     if (!isFolder) {
       this.contextValue = 'testPlanFile';
@@ -21,14 +73,21 @@ export class TestPlanItem extends vscode.TreeItem {
         title: 'Open Test Plan',
         arguments: [vscode.Uri.file(filePath)],
       };
+      this.description = path.basename(path.dirname(filePath));
     } else {
       this.contextValue = 'testPlanFolder';
       this.iconPath = new vscode.ThemeIcon('folder');
+      this.description = '';
     }
   }
 }
 
-export class TestPlanTreeProvider implements vscode.TreeDataProvider<TestPlanItem> {
+export class TestPlanTreeProvider
+  implements vscode.TreeDataProvider<TestPlanItem>, vscode.TreeDragAndDropController<TestPlanItem>
+{
+  dropMimeTypes = ['application/vnd.code.tree.gometerTestPlans', 'text/uri-list'];
+  dragMimeTypes = ['application/vnd.code.tree.gometerTestPlans'];
+
   private _onDidChangeTreeData: vscode.EventEmitter<TestPlanItem | undefined | void> =
     new vscode.EventEmitter<TestPlanItem | undefined | void>();
   readonly onDidChangeTreeData: vscode.Event<TestPlanItem | undefined | void> =
@@ -43,38 +102,155 @@ export class TestPlanTreeProvider implements vscode.TreeDataProvider<TestPlanIte
   }
 
   async getChildren(element?: TestPlanItem): Promise<TestPlanItem[]> {
-    if (element) {
-      return [];
-    }
-
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       return [];
     }
+    const rootPath = workspaceFolders[0].uri.fsPath;
 
-    const testFiles = await vscode.workspace.findFiles('**/*.{yaml,yml}', '**/node_modules/**');
-    const items: TestPlanItem[] = [];
+    const currentDir = element ? element.filePath : rootPath;
+    if (!fs.existsSync(currentDir)) {
+      return [];
+    }
 
-    for (const uri of testFiles) {
-      try {
-        const content = fs.readFileSync(uri.fsPath, 'utf8');
-        // Check if YAML content contains GoMeter markers
-        if (content.includes('base_url') && content.includes('scenarios')) {
-          const fileName = path.basename(uri.fsPath);
-          items.push(
-            new TestPlanItem(
-              fileName,
-              uri.fsPath,
-              vscode.TreeItemCollapsibleState.None
-            )
-          );
+    try {
+      const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+      const folderItems: TestPlanItem[] = [];
+      const fileItems: TestPlanItem[] = [];
+
+      for (const entry of entries) {
+        if (entry.name.startsWith('.') || IGNORED_DIRS.has(entry.name)) {
+          continue;
         }
-      } catch {
-        // Skip unreadable files
+
+        const fullPath = path.join(currentDir, entry.name);
+
+        if (entry.isDirectory()) {
+          // Include directory if it contains test plans or is explicitly in a test folder
+          if (containsTestPlans(fullPath) || element !== undefined) {
+            folderItems.push(
+              new TestPlanItem(
+                entry.name,
+                fullPath,
+                vscode.TreeItemCollapsibleState.Collapsed,
+                true
+              )
+            );
+          }
+        } else if (entry.isFile()) {
+          if (isGoMeterTestFile(fullPath)) {
+            fileItems.push(
+              new TestPlanItem(
+                entry.name,
+                fullPath,
+                vscode.TreeItemCollapsibleState.None,
+                false
+              )
+            );
+          }
+        }
+      }
+
+      folderItems.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+      fileItems.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+
+      return [...folderItems, ...fileItems];
+    } catch {
+      return [];
+    }
+  }
+
+  // Drag and Drop Controller Implementation
+  handleDrag(
+    source: readonly TestPlanItem[],
+    treeDataTransfer: vscode.DataTransfer,
+    token: vscode.CancellationToken
+  ): void {
+    treeDataTransfer.set(
+      'application/vnd.code.tree.gometerTestPlans',
+      new vscode.DataTransferItem(source)
+    );
+  }
+
+  async handleDrop(
+    target: TestPlanItem | undefined,
+    sources: vscode.DataTransfer,
+    token: vscode.CancellationToken
+  ): Promise<void> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return;
+    }
+    const rootPath = workspaceFolders[0].uri.fsPath;
+
+    // Resolve destination folder
+    let targetDir: string;
+    if (!target) {
+      targetDir = rootPath;
+    } else if (target.isFolder) {
+      targetDir = target.filePath;
+    } else {
+      targetDir = path.dirname(target.filePath);
+    }
+
+    // 1. Handle internal tree items drag
+    const internalTransfer = sources.get('application/vnd.code.tree.gometerTestPlans');
+    if (internalTransfer && Array.isArray(internalTransfer.value)) {
+      const items: TestPlanItem[] = internalTransfer.value;
+
+      for (const item of items) {
+        if (token.isCancellationRequested) break;
+        const sourcePath = item.filePath;
+        if (!fs.existsSync(sourcePath)) continue;
+
+        const fileName = path.basename(sourcePath);
+        const destinationPath = path.join(targetDir, fileName);
+
+        if (sourcePath === destinationPath) continue;
+
+        if (item.isFolder && destinationPath.startsWith(sourcePath + path.sep)) {
+          vscode.window.showWarningMessage(`Cannot move folder '${item.label}' into itself.`);
+          continue;
+        }
+
+        try {
+          await vscode.workspace.fs.rename(
+            vscode.Uri.file(sourcePath),
+            vscode.Uri.file(destinationPath),
+            { overwrite: false }
+          );
+        } catch (err: any) {
+          vscode.window.showErrorMessage(`Failed to move ${fileName}: ${err.message || err}`);
+        }
       }
     }
 
-    return items;
+    // 2. Handle text/uri-list from Explorer / external
+    const uriTransfer = sources.get('text/uri-list');
+    if (uriTransfer && typeof uriTransfer.value === 'string') {
+      const uriStrings = uriTransfer.value.split(/\r?\n/).filter(Boolean);
+      for (const uriStr of uriStrings) {
+        try {
+          const uri = vscode.Uri.parse(uriStr);
+          if (uri.scheme === 'file') {
+            const sourcePath = uri.fsPath;
+            if (!fs.existsSync(sourcePath)) continue;
+            const fileName = path.basename(sourcePath);
+            const destinationPath = path.join(targetDir, fileName);
+            if (sourcePath === destinationPath) continue;
+
+            await vscode.workspace.fs.rename(
+              vscode.Uri.file(sourcePath),
+              vscode.Uri.file(destinationPath),
+              { overwrite: false }
+            );
+          }
+        } catch {
+          // Skip invalid URIs
+        }
+      }
+    }
+
+    this.refresh();
   }
 }
-

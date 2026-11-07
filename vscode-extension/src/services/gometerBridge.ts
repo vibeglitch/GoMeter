@@ -172,88 +172,88 @@ export class GoMeterBridge {
         this.stopActiveTest();
       });
 
-      proc.on('close', (code, signal) => {
-        cancelRegistration.dispose();
-        const wasStopped = this.wasStopped || signal === 'SIGTERM';
-        this.activeProcess = null;
-        this.isRunning = false;
-        this.wasStopped = false;
+        proc.on('close', (code, signal) => {
+          cancelRegistration.dispose();
+          const wasStopped = this.wasStopped || signal === 'SIGTERM';
+          this.activeProcess = null;
+          this.isRunning = false;
+          this.wasStopped = false;
 
-        // If report wasn't parsed from live stream, read reports/latest.json
-        if (!report) {
-          try {
-            const reportDirPath = path.join(cwd || '.', 'reports', 'latest.json');
-            if (fs.existsSync(reportDirPath)) {
-              report = JSON.parse(fs.readFileSync(reportDirPath, 'utf8'));
+          // If report wasn't parsed from live stream, read reports/latest.json
+          if (!report) {
+            try {
+              const reportDirPath = path.join(cwd || '.', 'reports', 'latest.json');
+              if (fs.existsSync(reportDirPath)) {
+                report = JSON.parse(fs.readFileSync(reportDirPath, 'utf8'));
+              }
+            } catch {
+              // Ignore file read error
             }
-          } catch {
-            // Ignore file read error
           }
-        }
 
-        // Fallback: check stdout lines for JSON report
-        if (!report) {
-          try {
-            const lines = stdout.trim().split('\n');
-            for (let i = lines.length - 1; i >= 0; i--) {
-              const l = lines[i].trim();
-              if (l.startsWith('{') && l.endsWith('}')) {
-                const p = JSON.parse(l);
-                if (p.test_name || p.total_requests !== undefined || p.report) {
-                  report = p.report || p;
-                  break;
+          // Fallback: check stdout lines for JSON report
+          if (!report) {
+            try {
+              const lines = stdout.trim().split('\n');
+              for (let i = lines.length - 1; i >= 0; i--) {
+                const l = lines[i].trim();
+                if (l.startsWith('{') && l.endsWith('}')) {
+                  const p = JSON.parse(l);
+                  if (p.test_name || p.total_requests !== undefined || p.report) {
+                    report = p.report || p;
+                    break;
+                  }
                 }
               }
+            } catch {
+              // Ignore line parsing error
             }
-          } catch {
-            // Ignore line parsing error
           }
-        }
 
-        if (wasStopped) {
-          resolve({
-            success: false,
-            stopped: true,
-            report,
-            output: stdout,
+            if (wasStopped) {
+              resolve({
+                success: false,
+                stopped: true,
+                report,
+                output: stdout,
+              });
+            } else if (code === 0 || code === 2) {
+              resolve({
+                success: code === 0,
+                report,
+                output: stdout,
+              });
+            } else {
+              resolve({
+                success: false,
+                report,
+                output: stdout,
+                error: stderr || `Process exited with code ${code}`,
+              });
+            }
           });
-        } else if (code === 0 || code === 2) {
-          resolve({
-            success: code === 0,
-            report,
-            output: stdout,
-          });
-        } else {
-          resolve({
-            success: false,
-            report,
-            output: stdout,
-            error: stderr || `Process exited with code ${code}`,
-          });
-        }
       });
-    });
-  }
+    }
 
   /**
    * Stop active running test
    */
   public stopActiveTest(): boolean {
-    if (this.activeProcess && this.isRunning) {
-      this.wasStopped = true;
-      try {
-        this.activeProcess.kill('SIGTERM');
-      } catch {
+      if (this.activeProcess && this.isRunning) {
+        this.wasStopped = true;
         try {
-          this.activeProcess.kill('SIGKILL');
+          this.activeProcess.kill('SIGTERM');
         } catch {
-          // Process already terminated
+          try {
+            this.activeProcess.kill('SIGKILL');
+          } catch {
+            // Process already terminated
+          }
         }
+        return true;
       }
-      return true;
+      return false;
     }
-    return false;
-  }
 
   /**
    * Retrieves historical test runs from reports/history/index.json or reports/latest.json
@@ -301,16 +301,16 @@ export class GoMeterBridge {
     if (reportId === 'latest') {
       const p = path.join(cwd, 'reports', 'latest.json');
       if (fs.existsSync(p)) {
-        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
+        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch { }
       }
     }
     if (path.isAbsolute(reportId) && fs.existsSync(reportId)) {
-      try { return JSON.parse(fs.readFileSync(reportId, 'utf8')); } catch {}
+      try { return JSON.parse(fs.readFileSync(reportId, 'utf8')); } catch { }
     }
     const fileName = reportId.endsWith('.json') ? reportId : `${reportId}.json`;
     const historyPath = path.join(cwd, 'reports', 'history', fileName);
     if (fs.existsSync(historyPath)) {
-      try { return JSON.parse(fs.readFileSync(historyPath, 'utf8')); } catch {}
+      try { return JSON.parse(fs.readFileSync(historyPath, 'utf8')); } catch { }
     }
     return null;
   }

@@ -1,0 +1,63 @@
+name: "CSV Data-Driven Authentication Flow"
+description: "Demonstrates JMeter-style CSV parameterization with virtual users logging in from CSV credentials"
+base_url: "https://httpbin.org"
+
+variables:
+  inline:
+    app_client_id: "gometer-client-v1"
+  csv:
+    - name: credentials
+      file: "./data/users.csv"
+      delimiter: ","
+
+defaults:
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+    X-Client-Id: "${app_client_id}"
+  timeout: 10s
+
+scenarios:
+  - name: "User Login and Token Verification"
+    virtual_users: 6
+    duration: 10s
+    ramp_up: 2s
+    think_time: 200ms
+    requests:
+      - name: "Authenticate User"
+        method: POST
+        path: "/post"
+        body: '{"username": "${username}", "password": "${password}"}'
+        assertions:
+          - type: status
+            expected: "200"
+          - type: body_contains
+            expected: "${username}"
+          - type: latency
+            expected: "<2000ms"
+        extract:
+          - name: submitted_user
+            source: body_json
+            path: "$.json.username"
+
+      - name: "Fetch Account Details"
+        method: GET
+        path: "/anything/accounts/${submitted_user}"
+        headers:
+          X-Account-Role: "${expected_role}"
+        assertions:
+          - type: status
+            expected: "200"
+          - type: body_contains
+            expected: "${submitted_user}"
+
+    thresholds:
+      - metric: p95_latency
+        operator: "<"
+        value: 1500
+        unit: ms
+      - metric: error_rate
+        operator: "<"
+        value: 2.0
+        unit: "%"
+

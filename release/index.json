@@ -1,0 +1,19 @@
+{
+  "latest": "1.0.0",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "release_date": "2026-11-07",
+      "notes": "release/v1.0.0/RELEASE_NOTES.md",
+      "artifacts": {
+        "vsix": "release/v1.0.0/gometer-1.0.0.vsix",
+        "linux_amd64": "release/v1.0.0/gometer-v1.0.0-linux-amd64.tar.gz",
+        "windows_amd64": "release/v1.0.0/gometer-v1.0.0-windows-amd64.zip",
+        "darwin_arm64": "release/v1.0.0/gometer-v1.0.0-darwin-arm64.tar.gz",
+        "darwin_amd64": "release/v1.0.0/gometer-v1.0.0-darwin-amd64.tar.gz",
+        "checksums": "release/v1.0.0/checksums.txt"
+      }
+    }
+  ]
+}
+

@@ -1,0 +1,39 @@
+name: Sample API Load Test
+description: A starter GoMeter test plan for API performance testing
+base_url: https://httpbin.org
+defaults:
+    headers:
+        Accept: application/json
+        Content-Type: application/json
+    timeout: 10s
+scenarios:
+    - name: API Smoke Test
+      virtual_users: 5
+      duration: 10s
+      ramp_up: 2s
+      think_time: 500ms
+      requests:
+        - name: Get JSON Data
+          method: GET
+          path: /json
+          assertions:
+            - type: status
+              expected: "200"
+            - type: latency
+              expected: <500ms
+        - name: Post Status
+          method: POST
+          path: /post
+          body: '{"status": "testing", "runner": "gometer"}'
+          assertions:
+            - type: status
+              expected: "200"
+      thresholds:
+        - metric: p95_latency
+          operator: <
+          value: 600
+          unit: ms
+        - metric: error_rate
+          operator: <
+          value: 1
+          unit: '%'

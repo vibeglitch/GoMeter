@@ -1,0 +1,37 @@
+name: "Local High-Throughput API Benchmark"
+description: "Benchmarking local endpoint with 20 virtual users"
+base_url: "http://127.0.0.1:18080"
+defaults:
+  headers:
+    Content-Type: "application/json"
+  timeout: 5s
+scenarios:
+  - name: "User API Load"
+    virtual_users: 20
+    duration: 3s
+    ramp_up: 500ms
+    requests:
+      - name: "Fetch Users"
+        method: GET
+        path: "/users"
+        assertions:
+          - type: status
+            expected: "200"
+          - type: latency
+            expected: "<50ms"
+      - name: "Create User"
+        method: POST
+        path: "/users"
+        body: '{"name": "tester"}'
+        assertions:
+          - type: status
+            expected: "200"
+    thresholds:
+      - metric: p95_latency
+        operator: "<"
+        value: 50
+        unit: ms
+      - metric: error_rate
+        operator: "<"
+        value: 1
+        unit: "%"

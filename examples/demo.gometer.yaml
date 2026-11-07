@@ -1,0 +1,42 @@
+name: "E-Commerce API Load Test"
+description: "Simulating 15 concurrent shoppers browsing and purchasing items"
+base_url: "http://127.0.0.1:19090"
+defaults:
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+  timeout: 5s
+scenarios:
+  - name: "Shopping Flow"
+    virtual_users: 15
+    duration: 2s
+    ramp_up: 200ms
+    think_time: 10ms
+    requests:
+      - name: "Browse Catalog"
+        method: GET
+        path: "/products"
+        assertions:
+          - type: status
+            expected: "200"
+          - type: body_json
+            path: "$.status"
+            expected: "ok"
+          - type: latency
+            expected: "<50ms"
+      - name: "Checkout Cart"
+        method: POST
+        path: "/checkout"
+        body: '{"cart_id": "cart_123"}'
+        assertions:
+          - type: status
+            expected: "201"
+    thresholds:
+      - metric: p95_latency
+        operator: "<"
+        value: 50
+        unit: ms
+      - metric: error_rate
+        operator: "<"
+        value: 1
+        unit: "%"

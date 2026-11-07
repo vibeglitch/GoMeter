@@ -1,0 +1,182 @@
+{
+  "name": "gometer",
+  "displayName": "GoMeter - High Performance API Testing & Load Testing",
+  "description": "Go-powered JMeter alternative for API testing, load testing, real-time metrics, LLM generation, and MCP support.",
+  "version": "1.0.0",
+  "publisher": "naveen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/naveen/gometer"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Testing",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "gometer",
+    "jmeter",
+    "api-testing",
+    "load-testing",
+    "mcp",
+    "performance"
+  ],
+  "icon": "resources/icon.png",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gometer-sidebar",
+          "title": "GoMeter",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "gometer-sidebar": [
+        {
+          "id": "gometer.testPlansView",
+          "name": "Test Plans",
+          "contextualTitle": "GoMeter Test Plans"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "gometer.runActiveTest",
+        "title": "GoMeter: Run Current Test Plan",
+        "icon": "$(play)"
+      },
+      {
+        "command": "gometer.runTestFile",
+        "title": "GoMeter: Run Test Plan",
+        "icon": "$(play)"
+      },
+      {
+        "command": "gometer.openDashboard",
+        "title": "GoMeter: Open Live Dashboard",
+        "icon": "$(graph-line)"
+      },
+      {
+        "command": "gometer.generateTestWithAI",
+        "title": "GoMeter: Generate Test Plan with AI",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "gometer.analyzeReportWithAI",
+        "title": "GoMeter: Analyze Test Results with AI",
+        "icon": "$(beaker)"
+      },
+      {
+        "command": "gometer.validateTestPlan",
+        "title": "GoMeter: Validate Test Plan",
+        "icon": "$(check)"
+      },
+      {
+        "command": "gometer.initTestPlan",
+        "title": "GoMeter: Create Starter Test Plan",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "gometer.stopActiveTest",
+        "title": "GoMeter: Stop Running Test",
+        "icon": "$(debug-stop)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "gometer.initTestPlan",
+          "when": "view == gometer.testPlansView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gometer.generateTestWithAI",
+          "when": "view == gometer.testPlansView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gometer.openDashboard",
+          "when": "view == gometer.testPlansView",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gometer.runTestFile",
+          "when": "viewItem == testPlanFile",
+          "group": "inline@1"
+        },
+        {
+          "command": "gometer.validateTestPlan",
+          "when": "viewItem == testPlanFile",
+          "group": "inline@2"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "gometer.runActiveTest",
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GoMeter",
+      "properties": {
+        "gometer.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the gometer executable binary. If empty, uses bundled or PATH binary."
+        },
+        "gometer.defaultOutputFormat": {
+          "type": "string",
+          "default": "json",
+          "enum": [
+            "json",
+            "html",
+            "console",
+            "all"
+          ],
+          "description": "Report output format"
+        },
+        "gometer.reportDirectory": {
+          "type": "string",
+          "default": "./reports",
+          "description": "Directory where reports are stored"
+        }
+      }
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": [
+          "*.gometer.yaml",
+          "*.gometer.yml",
+          "*gometer*.yaml",
+          "*gometer*.yml"
+        ],
+        "url": "./schemas/gometer.schema.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}

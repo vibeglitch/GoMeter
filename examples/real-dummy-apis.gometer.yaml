@@ -1,0 +1,122 @@
+# GoMeter Real Dummy APIs Load & Concurrency Test Plan
+# Evaluates live public HTTP endpoints with assertions, headers, and parameterization.
+name: "Real Dummy APIs Concurrency & Load Suite"
+description: "Realistic load test targeting JSONPlaceholder, DummyJSON, and HttpBin"
+version: "1.0.0"
+base_url: "https://jsonplaceholder.typicode.com"
+
+variables:
+  client_id: "gometer-client-01"
+  sample_title: "GoMeter Load Test Post"
+  sample_body: "High-performance API testing with Go and MCP"
+
+scenarios:
+  - name: "JSONPlaceholder CRUD Operations"
+    virtual_users: 5
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "50ms"
+    requests:
+      - name: "Fetch Posts List"
+        method: "GET"
+        path: "/posts"
+        headers:
+          Accept: "application/json"
+          User-Agent: "GoMeter/1.0.0"
+        assertions:
+          - type: "status"
+            operator: "=="
+            expected: "200"
+          - type: "latency"
+            operator: "<"
+            expected: "3000ms"
+        extract:
+          - name: "first_post_id"
+            from: "body"
+            query: "$[0].id"
+
+      - name: "Fetch Single Post"
+        method: "GET"
+        path: "/posts/1"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - type: "status"
+            operator: "=="
+            expected: "200"
+          - type: "jsonpath"
+            query: "$.id"
+            operator: "=="
+            expected: "1"
+
+      - name: "Create New Post"
+        method: "POST"
+        path: "/posts"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "${var:sample_title}",
+            "body": "${var:sample_body}",
+            "userId": 42
+          }
+        assertions:
+          - type: "status"
+            operator: "=="
+            expected: "201"
+          - type: "jsonpath"
+            query: "$.id"
+            operator: "=="
+            expected: "101"
+
+  - name: "DummyJSON Product Catalog"
+    virtual_users: 4
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "100ms"
+    requests:
+      - name: "Query Products"
+        method: "GET"
+        path: "https://dummyjson.com/products?limit=5"
+        headers:
+          Accept: "application/json"
+          User-Agent: "GoMeter/1.0.0"
+        assertions:
+          - type: "status"
+            operator: "=="
+            expected: "200"
+          - type: "latency"
+            operator: "<"
+            expected: "3500ms"
+
+  - name: "HttpBin Echo & Validation"
+    virtual_users: 3
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "50ms"
+    requests:
+      - name: "Echo Headers & Query"
+        method: "GET"
+        path: "https://httpbin.org/get?source=gometer&test=live"
+        headers:
+          X-Custom-Client: "GoMeter-VU"
+          Accept: "application/json"
+        assertions:
+          - type: "status"
+            operator: "=="
+            expected: "200"
+          - type: "latency"
+            operator: "<"
+            expected: "4000ms"
+
+thresholds:
+  - metric: "error_rate"
+    operator: "<"
+    value: 5.0
+    unit: "%"
+  - metric: "p95_latency"
+    operator: "<"
+    value: 3000.0
+    unit: "ms"
+

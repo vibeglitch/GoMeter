@@ -1,0 +1,8 @@
+username,password,expected_role
+alice,secretPass1,admin
+bob,secretPass2,user
+charlie,secretPass3,manager
+diana,secretPass4,user
+evan,secretPass5,analyst
+fiona,secretPass6,developer
+

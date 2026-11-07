@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="gometer-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="#0f172a"/>
+  <!-- Meter arc -->
+  <path d="M 28 88 A 44 44 0 1 1 100 88" fill="none" stroke="#334155" stroke-width="10" stroke-linecap="round"/>
+  <path d="M 28 88 A 44 44 0 1 1 85 40" fill="none" stroke="url(#gometer-grad)" stroke-width="10" stroke-linecap="round"/>
+  <!-- Lightning bolt needle -->
+  <path d="M 68 32 L 52 64 L 66 64 L 56 94 L 84 56 L 68 56 Z" fill="#38bdf8"/>
+  <circle cx="64" cy="76" r="6" fill="#f8fafc"/>
+</svg>
+

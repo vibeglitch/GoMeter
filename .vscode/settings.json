@@ -1,0 +1,12 @@
+{
+  "go.goroot": "${workspaceFolder}/.tools/go",
+  "go.gopath": "${workspaceFolder}/.tools/gopath",
+  "go.alternateTools": {
+    "go": "${workspaceFolder}/.tools/go/bin/go"
+  },
+  "terminal.integrated.env.linux": {
+    "PATH": "${workspaceFolder}/.tools/go/bin:${env:PATH}",
+    "GOROOT": "${workspaceFolder}/.tools/go",
+    "GOPATH": "${workspaceFolder}/.tools/gopath"
+  }
+}

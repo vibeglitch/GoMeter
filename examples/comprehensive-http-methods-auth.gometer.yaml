@@ -1,0 +1,243 @@
+# GoMeter Comprehensive HTTP Methods & Token Chaining Suite
+# Validates GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS, Auth Token Chaining, and Negative 401/404 scenarios
+name: "Comprehensive HTTP Methods & Token Chaining Suite"
+description: "End-to-end verification of all HTTP verbs, JWT authentication lifecycle, token passing, and negative responses"
+version: "1.1.0"
+base_url: "https://dummyjson.com"
+
+variables:
+  login_user: "emilys"
+  login_pass: "emilyspass"
+  new_product_title: "GoMeter Ultra Load Tester"
+  new_product_category: "developer-tools"
+  patched_product_title: "GoMeter Patched Edition"
+
+scenarios:
+  # =========================================================================
+  # SCENARIO 1: Authentication & JWT Token Chaining
+  # =========================================================================
+  - name: "JWT Auth & Protected Endpoints Lifecycle"
+    virtual_users: 2
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "50ms"
+    requests:
+      - name: "1. Login & Generate Token"
+        method: "POST"
+        path: "/auth/login"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "username": "${var:login_user}",
+            "password": "${var:login_pass}",
+            "expiresInMins": 30
+          }
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "jsonpath"
+            path: "$.accessToken"
+            expected: "exists"
+          - type: "jsonpath"
+            path: "$.username"
+            expected: "emilys"
+          - type: "latency"
+            expected: "< 3500ms"
+        extract:
+          - name: "auth_token"
+            source: "body_json"
+            path: "$.accessToken"
+          - name: "user_email"
+            source: "body_json"
+            path: "$.email"
+
+      - name: "2. Access Protected Profile with Bearer Token"
+        method: "GET"
+        path: "/auth/me"
+        headers:
+          Accept: "application/json"
+          Authorization: "Bearer ${var:auth_token}"
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "jsonpath"
+            path: "$.username"
+            expected: "emilys"
+          - type: "latency"
+            expected: "< 3500ms"
+
+      - name: "3. Access Protected Products with Bearer Token"
+        method: "GET"
+        path: "/auth/products?limit=2"
+        headers:
+          Accept: "application/json"
+          Authorization: "Bearer ${var:auth_token}"
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "jsonpath"
+            path: "$.products[0].id"
+            expected: "exists"
+
+  # =========================================================================
+  # SCENARIO 2: Full RESTful CRUD Lifecycle (POST, GET, PUT, PATCH, DELETE)
+  # =========================================================================
+  - name: "Full RESTful CRUD Operations"
+    virtual_users: 2
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "50ms"
+    requests:
+      - name: "1. POST Create Product"
+        method: "POST"
+        path: "/products/add"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "${var:new_product_title}",
+            "category": "${var:new_product_category}",
+            "price": 249.99
+          }
+        assertions:
+          - type: "status"
+            expected: "200, 201"
+          - type: "jsonpath"
+            path: "$.title"
+            expected: "GoMeter Ultra Load Tester"
+          - type: "jsonpath"
+            path: "$.id"
+            expected: "exists"
+
+      - name: "2. GET Read Product"
+        method: "GET"
+        path: "/products/1"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "jsonpath"
+            path: "$.id"
+            expected: "1"
+
+      - name: "3. PUT Full Update Product"
+        method: "PUT"
+        path: "/products/1"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "GoMeter Full Replacement Title",
+            "price": 399.00
+          }
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "jsonpath"
+            path: "$.title"
+            expected: "GoMeter Full Replacement Title"
+
+      - name: "4. PATCH Partial Update Product"
+        method: "PATCH"
+        path: "/products/1"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "${var:patched_product_title}"
+          }
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "jsonpath"
+            path: "$.title"
+            expected: "GoMeter Patched Edition"
+
+      - name: "5. DELETE Product"
+        method: "DELETE"
+        path: "/products/1"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - type: "status"
+            expected: "200, 204"
+          - type: "jsonpath"
+            path: "$.isDeleted"
+            expected: "true"
+
+  # =========================================================================
+  # SCENARIO 3: Protocol Verbs & Headers (HEAD, OPTIONS)
+  # =========================================================================
+  - name: "Protocol Verbs & CORS Handshake"
+    virtual_users: 2
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "50ms"
+    requests:
+      - name: "1. HEAD Request"
+        method: "HEAD"
+        path: "https://httpbin.org/get"
+        headers:
+          User-Agent: "GoMeter/1.1.0"
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "latency"
+            expected: "< 3500ms"
+
+      - name: "2. OPTIONS Preflight Request"
+        method: "OPTIONS"
+        path: "https://httpbin.org/anything"
+        headers:
+          Origin: "https://gometer.dev"
+          Access-Control-Request-Method: "POST"
+        assertions:
+          - type: "status"
+            expected: "200"
+          - type: "latency"
+            expected: "< 3500ms"
+
+  # =========================================================================
+  # SCENARIO 4: Negative Assertions & Error Handling (401 & 404)
+  # =========================================================================
+  - name: "Negative Assertions & Error Verification"
+    virtual_users: 2
+    duration: "4s"
+    ramp_up: "1s"
+    think_time: "50ms"
+    requests:
+      - name: "1. Unauthorized Without Valid Token"
+        method: "GET"
+        path: "/auth/me"
+        headers:
+          Authorization: "Bearer invalid_or_expired_jwt_token"
+        assertions:
+          - type: "status"
+            expected: "401, 403"
+          - type: "latency"
+            expected: "< 3500ms"
+
+      - name: "2. Not Found 404 Nonexistent Product"
+        method: "GET"
+        path: "/products/99999999"
+        assertions:
+          - type: "status"
+            expected: "404"
+          - type: "latency"
+            expected: "< 3500ms"
+
+thresholds:
+  - metric: "error_rate"
+    operator: "<="
+    value: 5.0
+    unit: "%"
+  - metric: "p95_latency"
+    operator: "<"
+    value: 3500.0
+    unit: "ms"

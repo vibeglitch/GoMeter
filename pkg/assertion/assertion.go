@@ -75,7 +75,7 @@ func (e *Evaluator) Evaluate(a config.Assertion, resp *http.Response, body []byt
 			actualCode = resp.StatusCode
 		}
 		res.Actual = strconv.Itoa(actualCode)
-		res.Passed = checkStatus(actualCode, expected)
+		res.Passed = checkStatus(actualCode, expected, a.Operator)
 		if !res.Passed {
 			res.Error = fmt.Sprintf("expected status %s, got %d", expected, actualCode)
 		}
@@ -107,7 +107,7 @@ func (e *Evaluator) Evaluate(a config.Assertion, resp *http.Response, body []byt
 			res.Passed = false
 			res.Error = fmt.Sprintf("JSON path '%s' not found in response", path)
 		} else {
-			res.Passed = checkJSONExpected(val, expected)
+			res.Passed = checkJSONExpected(val, expected, a.Operator)
 			if !res.Passed {
 				res.Error = fmt.Sprintf("JSON path '%s' value '%v' did not match expected '%s'", path, val, expected)
 			}
@@ -171,7 +171,10 @@ func (e *Evaluator) ExtractAll(extractions []config.Extraction, resp *http.Respo
 	}
 }
 
-func checkStatus(actual int, expected string) bool {
+func checkStatus(actual int, expected string, op string) bool {
+	expected = strings.TrimSpace(expected)
+	op = strings.TrimSpace(op)
+
 	if expected == "2xx" {
 		return actual >= 200 && actual < 300
 	}
@@ -185,7 +188,17 @@ func checkStatus(actual int, expected string) bool {
 		return actual >= 500 && actual < 600
 	}
 
-	parts := strings.Split(expected, ",")
+	if op == "!=" || strings.HasPrefix(expected, "!=") {
+		target := strings.TrimSpace(strings.TrimPrefix(expected, "!="))
+		code, err := strconv.Atoi(target)
+		if err == nil {
+			return actual != code
+		}
+	}
+
+	target := strings.TrimPrefix(expected, "==")
+	target = strings.TrimPrefix(target, "=")
+	parts := strings.Split(target, ",")
 	for _, p := range parts {
 		p = strings.TrimSpace(p)
 		if strings.HasPrefix(p, "!=") {
@@ -247,7 +260,10 @@ func checkLatency(latency time.Duration, expected string) bool {
 	return false
 }
 
-func checkJSONExpected(val interface{}, expected string) bool {
+func checkJSONExpected(val interface{}, expected string, op string) bool {
+	expected = strings.TrimSpace(expected)
+	op = strings.TrimSpace(op)
+
 	if expected == "not_empty" || expected == "exists" {
 		if val == nil {
 			return false
@@ -264,7 +280,19 @@ func checkJSONExpected(val interface{}, expected string) bool {
 		return true
 	}
 
-	return fmt.Sprintf("%v", val) == expected
+	valStr := fmt.Sprintf("%v", val)
+
+	if op == "!=" || strings.HasPrefix(expected, "!=") {
+		target := expected
+		if strings.HasPrefix(expected, "!=") {
+			target = strings.TrimSpace(strings.TrimPrefix(expected, "!="))
+		}
+		return valStr != target
+	}
+
+	target := strings.TrimPrefix(expected, "==")
+	target = strings.TrimPrefix(target, "=")
+	return valStr == target
 }
 
 func extractJSONValue(body []byte, path string) (interface{}, bool) {

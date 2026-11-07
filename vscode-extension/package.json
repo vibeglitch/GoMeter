@@ -6,7 +6,7 @@
   "publisher": "naveen",
   "repository": {
     "type": "git",
-    "url": "https://github.com/naveen/gometer"
+    "url": "https://github.com/vibeglitch/GoMeter"
   },
   "engines": {
     "vscode": "^1.90.0"

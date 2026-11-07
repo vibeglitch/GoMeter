@@ -53,7 +53,7 @@ async function executeTest(
   bridge: GoMeterBridge,
   statusBarItem: vscode.StatusBarItem
 ) {
-  const panel = DashboardPanel.createOrShow(context.extensionUri);
+  const panel = DashboardPanel.createOrShow(context.extensionUri, bridge);
   panel.sendStatus('RUNNING');
   statusBarItem.text = '$(sync~spin) GoMeter: Running...';
   statusBarItem.show();
@@ -83,6 +83,7 @@ async function executeTest(
       if (res.report) {
         panel.sendReport(res.report);
       }
+      panel.sendHistory(bridge.getRunHistory());
 
       if (res.success) {
         statusBarItem.text = '$(check) GoMeter: Passed';

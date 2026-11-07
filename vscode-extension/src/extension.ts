@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Command: Open Dashboard
   context.subscriptions.push(
     vscode.commands.registerCommand('gometer.openDashboard', () => {
-      DashboardPanel.createOrShow(context.extensionUri);
+      DashboardPanel.createOrShow(context.extensionUri, bridge);
     })
   );
 

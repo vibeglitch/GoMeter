@@ -130,6 +130,7 @@ export class GoMeterBridge {
       let stdout = '';
       let stderr = '';
       let buffer = '';
+      let report: any = null;
 
       proc.stdout.on('data', (data: Buffer) => {
         const text = data.toString();
@@ -146,6 +147,8 @@ export class GoMeterBridge {
             const parsed = JSON.parse(trimmed);
             if (parsed.type === 'metric') {
               onLiveMetric(parsed);
+            } else if (parsed.type === 'complete' || parsed.type === 'report') {
+              report = parsed.report || parsed.data;
             }
           } catch {
             onLog(line);
@@ -169,17 +172,35 @@ export class GoMeterBridge {
         cancelRegistration.dispose();
         this.activeProcess = null;
 
-        // Try parsing full JSON report from stdout
-        let report: any = null;
-        try {
-          const firstBrace = stdout.indexOf('{');
-          const lastBrace = stdout.lastIndexOf('}');
-          if (firstBrace !== -1 && lastBrace !== -1) {
-            const jsonText = stdout.substring(firstBrace, lastBrace + 1);
-            report = JSON.parse(jsonText);
+        // If report wasn't parsed from live stream, read reports/latest.json
+        if (!report) {
+          try {
+            const reportDirPath = path.join(cwd || '.', 'reports', 'latest.json');
+            if (fs.existsSync(reportDirPath)) {
+              report = JSON.parse(fs.readFileSync(reportDirPath, 'utf8'));
+            }
+          } catch {
+            // Ignore file read error
           }
-        } catch {
-          // Fallback if not pure JSON
+        }
+
+        // Fallback: check stdout lines for JSON report
+        if (!report) {
+          try {
+            const lines = stdout.trim().split('\n');
+            for (let i = lines.length - 1; i >= 0; i--) {
+              const l = lines[i].trim();
+              if (l.startsWith('{') && l.endsWith('}')) {
+                const p = JSON.parse(l);
+                if (p.test_name || p.total_requests !== undefined || p.report) {
+                  report = p.report || p;
+                  break;
+                }
+              }
+            }
+          } catch {
+            // Ignore line parsing error
+          }
         }
 
         if (code === 0 || code === 2) {
@@ -210,6 +231,66 @@ export class GoMeterBridge {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Retrieves historical test runs from reports/history/index.json or reports/latest.json
+   */
+  public getRunHistory(): any[] {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const cwd = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : '.';
+    const historyIndex = path.join(cwd, 'reports', 'history', 'index.json');
+    if (fs.existsSync(historyIndex)) {
+      try {
+        return JSON.parse(fs.readFileSync(historyIndex, 'utf8'));
+      } catch {
+        return [];
+      }
+    }
+    const latest = path.join(cwd, 'reports', 'latest.json');
+    if (fs.existsSync(latest)) {
+      try {
+        const r = JSON.parse(fs.readFileSync(latest, 'utf8'));
+        return [{
+          id: 'latest',
+          test_name: r.test_name || 'Latest Run',
+          timestamp: r.start_time,
+          duration: `${((r.duration || 0) / 1e9).toFixed(1)}s`,
+          total_requests: r.total_requests,
+          rps: r.requests_per_second,
+          p95_latency_ms: (r.p95_latency || 0) / 1e6,
+          error_rate: r.error_rate_percent,
+          passed: r.passed,
+          report_path: latest
+        }];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Loads a specific report by ID or latest
+   */
+  public getReport(reportId: string): any | null {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const cwd = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : '.';
+    if (reportId === 'latest') {
+      const p = path.join(cwd, 'reports', 'latest.json');
+      if (fs.existsSync(p)) {
+        try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch {}
+      }
+    }
+    if (path.isAbsolute(reportId) && fs.existsSync(reportId)) {
+      try { return JSON.parse(fs.readFileSync(reportId, 'utf8')); } catch {}
+    }
+    const fileName = reportId.endsWith('.json') ? reportId : `${reportId}.json`;
+    const historyPath = path.join(cwd, 'reports', 'history', fileName);
+    if (fs.existsSync(historyPath)) {
+      try { return JSON.parse(fs.readFileSync(historyPath, 'utf8')); } catch {}
+    }
+    return null;
   }
 }
 

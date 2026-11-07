@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	version   = "1.1.0"
+	version   = "1.2.0"
 	outputFmt string
 	reportDir string
 	verbose   bool
@@ -122,7 +122,17 @@ tools to LLMs (Claude, VS Code Copilot, Cursor).`,
 	importCmd.Flags().StringVar(&postmanFile, "postman", "", "Path to Postman Collection v2.1 JSON file to convert")
 	importCmd.Flags().StringVarP(&importOutFile, "output", "o", "", "Destination file path for generated YAML")
 
-	// 6. version command
+	// 6. history command
+	historyCmd := &cobra.Command{
+		Use:   "history",
+		Short: "Display historical test runs",
+		Run: func(cmd *cobra.Command, args []string) {
+			displayHistory(reportDir)
+		},
+	}
+	historyCmd.Flags().StringVar(&reportDir, "report-dir", "./reports", "Directory where reports are stored")
+
+	// 7. version command
 	versionCmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print GoMeter version",
@@ -131,7 +141,7 @@ tools to LLMs (Claude, VS Code Copilot, Cursor).`,
 		},
 	}
 
-	rootCmd.AddCommand(runCmd, validateCmd, mcpCmd, initCmd, importCmd, versionCmd)
+	rootCmd.AddCommand(runCmd, validateCmd, mcpCmd, initCmd, importCmd, historyCmd, versionCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -208,11 +218,28 @@ func executeRun(cmd *cobra.Command, args []string) error {
 	latestJSON := filepath.Join(reportDir, "latest.json")
 	_ = reporter.ExportJSON(report, latestJSON)
 
+	// Save run to history
+	historyDir := filepath.Join(reportDir, "history")
+	_ = os.MkdirAll(historyDir, 0755)
+	runID := fmt.Sprintf("run-%d", report.StartTime.Unix())
+	historyFile := filepath.Join(historyDir, runID+".json")
+	_ = reporter.ExportJSON(report, historyFile)
+	saveHistoryIndex(historyDir, report, runID, historyFile)
+
 	// Format output
 	switch strings.ToLower(outputFmt) {
 	case "json":
-		data, _ := json.MarshalIndent(report, "", "  ")
-		fmt.Println(string(data))
+		if verbose {
+			completeMsg := map[string]interface{}{
+				"type":   "complete",
+				"report": report,
+			}
+			data, _ := json.Marshal(completeMsg)
+			fmt.Println(string(data))
+		} else {
+			data, _ := json.MarshalIndent(report, "", "  ")
+			fmt.Println(string(data))
+		}
 
 	case "html":
 		htmlPath := filepath.Join(reportDir, fmt.Sprintf("report-%d.html", time.Now().Unix()))
@@ -330,5 +357,79 @@ func executeInit(cmd *cobra.Command, args []string) error {
 	fmt.Println(color.GreenString("✅ Initialized test plan at %s", filename))
 	fmt.Printf("Run it with: gometer run %s\n", filename)
 	return nil
+}
+
+type HistoryEntry struct {
+	ID            string    `json:"id"`
+	TestName      string    `json:"test_name"`
+	Timestamp     time.Time `json:"timestamp"`
+	Duration      string    `json:"duration"`
+	TotalRequests int64     `json:"total_requests"`
+	RPS           float64   `json:"rps"`
+	P95LatencyMs  float64   `json:"p95_latency_ms"`
+	ErrorRate     float64   `json:"error_rate"`
+	Passed        bool      `json:"passed"`
+	ReportPath    string    `json:"report_path"`
+}
+
+func saveHistoryIndex(historyDir string, report *metrics.Report, runID, reportFile string) {
+	indexFile := filepath.Join(historyDir, "index.json")
+	var entries []HistoryEntry
+	if data, err := os.ReadFile(indexFile); err == nil {
+		_ = json.Unmarshal(data, &entries)
+	}
+
+	newEntry := HistoryEntry{
+		ID:            runID,
+		TestName:      report.TestName,
+		Timestamp:     report.StartTime,
+		Duration:      report.Duration.String(),
+		TotalRequests: report.TotalReqs,
+		RPS:           report.RPS,
+		P95LatencyMs:  float64(report.P95Latency.Milliseconds()),
+		ErrorRate:     report.ErrorRate,
+		Passed:        report.Passed,
+		ReportPath:    reportFile,
+	}
+
+	entries = append([]HistoryEntry{newEntry}, entries...)
+	if len(entries) > 50 {
+		entries = entries[:50]
+	}
+
+	data, err := json.MarshalIndent(entries, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(indexFile, data, 0644)
+	}
+}
+
+func displayHistory(reportDir string) {
+	historyIndex := filepath.Join(reportDir, "history", "index.json")
+	data, err := os.ReadFile(historyIndex)
+	if err != nil {
+		fmt.Printf("No test history found in %s/history\n", reportDir)
+		return
+	}
+	var entries []HistoryEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		fmt.Printf("Failed to parse history: %v\n", err)
+		return
+	}
+	fmt.Printf("\n📜 GoMeter Test Runs History (%d runs recorded):\n\n", len(entries))
+	fmt.Printf("%-20s %-25s %-8s %-10s %-12s %s\n", "RUN ID", "TEST PLAN", "REQS", "RPS", "P95", "STATUS")
+	fmt.Println(strings.Repeat("─", 85))
+	for _, e := range entries {
+		statusStr := color.GreenString("PASS")
+		if !e.Passed {
+			statusStr = color.RedString("FAIL")
+		}
+		name := e.TestName
+		if len(name) > 24 {
+			name = name[:21] + "..."
+		}
+		fmt.Printf("%-20s %-25s %-8d %-10.2f %-12s %s\n",
+			e.ID, name, e.TotalRequests, e.RPS, fmt.Sprintf("%.1fms", e.P95LatencyMs), statusStr)
+	}
+	fmt.Println()
 }
 

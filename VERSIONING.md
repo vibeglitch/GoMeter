@@ -41,10 +41,10 @@ All modules in this repository **must remain synchronized** on the identical ver
 
 | File Location | Target Identifier | Current |
 |---|---|---|
-| `cmd/gometer/main.go` | `var version` | `1.0.0` |
-| `mcp/server.go` | `Implementation.Version` | `1.0.0` |
-| `vscode-extension/package.json` | `"version"` | `1.0.0` |
-| VSIX Artifact | `gometer-<version>.vsix` | `gometer-1.0.0.vsix` |
+| `cmd/gometer/main.go` | `var version` | `1.2.0` |
+| `mcp/server.go` | `Implementation.Version` | `1.2.0` |
+| `vscode-extension/package.json` | `"version"` | `1.2.0` |
+| VSIX Artifact | `gometer-<version>.vsix` | `gometer-1.2.0.vsix` |
 
 Whenever a new release or version bump is prepared, all four locations **MUST** be updated simultaneously to prevent divergence between the CLI, the MCP server, and the VS Code extension.
 

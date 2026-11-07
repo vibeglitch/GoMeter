@@ -1,18 +1,23 @@
 import * as vscode from 'vscode';
-import { LiveMetricPayload } from '../services/gometerBridge';
+import { LiveMetricPayload, GoMeterBridge } from '../services/gometerBridge';
 
 export class DashboardPanel {
   public static currentPanel: DashboardPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
+  private _bridge?: GoMeterBridge;
   private _disposables: vscode.Disposable[] = [];
 
-  public static createOrShow(extensionUri: vscode.Uri) {
+  public static createOrShow(extensionUri: vscode.Uri, bridge?: GoMeterBridge) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
 
     if (DashboardPanel.currentPanel) {
+      if (bridge) {
+        DashboardPanel.currentPanel._bridge = bridge;
+        DashboardPanel.currentPanel.sendHistory(bridge.getRunHistory());
+      }
       DashboardPanel.currentPanel._panel.reveal(column);
       return DashboardPanel.currentPanel;
     }
@@ -27,13 +32,14 @@ export class DashboardPanel {
       }
     );
 
-    DashboardPanel.currentPanel = new DashboardPanel(panel, extensionUri);
+    DashboardPanel.currentPanel = new DashboardPanel(panel, extensionUri, bridge);
     return DashboardPanel.currentPanel;
   }
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri, bridge?: GoMeterBridge) {
     this._panel = panel;
     this._extensionUri = extensionUri;
+    this._bridge = bridge;
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
     this._panel.webview.html = this._getHtmlForWebview();
@@ -50,11 +56,34 @@ export class DashboardPanel {
           case 'stopTest':
             vscode.commands.executeCommand('gometer.stopActiveTest');
             break;
+          case 'getHistory':
+            if (this._bridge) {
+              this.sendHistory(this._bridge.getRunHistory());
+            }
+            break;
+          case 'loadRun':
+            if (this._bridge && message.runId) {
+              const rep = this._bridge.getReport(message.runId);
+              if (rep) {
+                this.sendReport(rep);
+              } else {
+                vscode.window.showWarningMessage(`Could not find report for run: ${message.runId}`);
+              }
+            }
+            break;
         }
       },
       null,
       this._disposables
     );
+
+    if (this._bridge) {
+      setTimeout(() => {
+        if (this._bridge) {
+          this.sendHistory(this._bridge.getRunHistory());
+        }
+      }, 300);
+    }
   }
 
   public sendLiveMetric(metric: LiveMetricPayload) {
@@ -63,6 +92,10 @@ export class DashboardPanel {
 
   public sendReport(report: any) {
     this._panel.webview.postMessage({ type: 'report', data: report });
+  }
+
+  public sendHistory(history: any[]) {
+    this._panel.webview.postMessage({ type: 'history', data: history });
   }
 
   public sendStatus(status: string) {
@@ -106,7 +139,10 @@ export class DashboardPanel {
       --method-get: #3b82f6;
       --method-post: #10b981;
       --method-put: #f59e0b;
+      --method-patch: #a855f7;
       --method-delete: #ef4444;
+      --method-head: #0ea5e9;
+      --method-options: #94a3b8;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -123,8 +159,10 @@ export class DashboardPanel {
       margin-bottom: 20px;
       padding-bottom: 12px;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .title-group { display: flex; align-items: center; gap: 12px; }
+    .title-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .brand { font-size: 22px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 6px; }
     .status-badge {
       padding: 4px 10px;
@@ -134,7 +172,25 @@ export class DashboardPanel {
       background: rgba(56, 189, 248, 0.2);
       color: var(--primary);
     }
-    .actions { display: flex; gap: 8px; align-items: center; }
+    .history-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+    }
+    .history-selector select {
+      background: transparent;
+      color: var(--text);
+      border: none;
+      outline: none;
+      font-size: 13px;
+      cursor: pointer;
+      max-width: 220px;
+    }
+    .actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     button {
       background: #2563eb;
       color: white;
@@ -224,7 +280,10 @@ export class DashboardPanel {
     .method-GET { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
     .method-POST { background: rgba(16, 185, 129, 0.2); color: #34d399; }
     .method-PUT { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .method-PATCH { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
     .method-DELETE { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .method-HEAD { background: rgba(14, 165, 233, 0.2); color: #38bdf8; }
+    .method-OPTIONS { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
     
     .log-box {
       background: #020617;
@@ -243,28 +302,23 @@ export class DashboardPanel {
       display: none;
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.75);
       backdrop-filter: blur(2px);
       z-index: 100;
       align-items: center;
       justify-content: center;
-      padding: 20px;
     }
     .modal {
       background: #1e293b;
-      border: 1px solid #475569;
-      border-radius: 10px;
-      width: 100%;
-      max-width: 820px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 720px;
       max-height: 85vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-      animation: modalFadeIn 0.15s ease-out;
-    }
-    @keyframes modalFadeIn {
-      from { opacity: 0; transform: scale(0.96); }
-      to { opacity: 1; transform: scale(1); }
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
     }
     .modal-header {
       padding: 16px 20px;
@@ -272,27 +326,25 @@ export class DashboardPanel {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: #182234;
     }
-    .modal-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .modal-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
     .modal-close {
       background: transparent;
       border: none;
       color: var(--muted);
-      font-size: 20px;
+      font-size: 18px;
       cursor: pointer;
-      padding: 4px 8px;
-      border-radius: 4px;
+      padding: 4px;
     }
-    .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    .modal-close:hover { color: var(--text); }
     .modal-tabs {
       display: flex;
-      gap: 4px;
-      padding: 0 20px;
+      background: #0f172a;
       border-bottom: 1px solid var(--border);
-      background: #182234;
     }
     .modal-tab {
-      padding: 10px 16px;
+      padding: 10px 20px;
       font-size: 13px;
       font-weight: 600;
       color: var(--muted);
@@ -302,49 +354,53 @@ export class DashboardPanel {
     .modal-tab.active {
       color: var(--primary);
       border-bottom-color: var(--primary);
+      background: #1e293b;
     }
     .modal-body {
-      padding: 20px;
+      padding: 16px 20px;
       overflow-y: auto;
-      font-size: 13px;
       flex: 1;
+    }
+    .section-subtitle {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 12px 0 6px 0;
     }
     .code-block {
       background: #020617;
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 12px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 10px 12px;
+      font-family: monospace;
       font-size: 12px;
       white-space: pre-wrap;
       word-break: break-all;
-      max-height: 260px;
+      max-height: 200px;
       overflow-y: auto;
       color: #e2e8f0;
     }
     .kv-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 16px;
       font-size: 12px;
+      margin-bottom: 12px;
     }
-    .kv-table th { background: #0f172a; padding: 6px 10px; color: var(--muted); }
-    .kv-table td { padding: 6px 10px; border-bottom: 1px solid #334155; font-family: monospace; }
-    .section-subtitle {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      margin: 12px 0 6px 0;
+    .kv-table td, .kv-table th {
+      padding: 6px 8px;
+      border: 1px solid var(--border);
     }
+    .kv-table th { background: #0f172a; color: var(--muted); }
     .assertion-item {
       padding: 8px 12px;
       border-radius: 6px;
-      margin-bottom: 8px;
-      font-size: 13px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-family: monospace;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .assertion-pass { background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #86efac; }
     .assertion-fail { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
@@ -355,9 +411,15 @@ export class DashboardPanel {
     <div class="title-group">
       <div class="brand">⚡ GoMeter</div>
       <div id="statusBadge" class="status-badge">Ready</div>
+      <div class="history-selector">
+        <label for="historySelect" style="font-size: 12px; color: var(--muted); font-weight: 600;">View Run:</label>
+        <select id="historySelect" onchange="onSelectRun(this.value)">
+          <option value="live">● Current / Live Test</option>
+        </select>
+      </div>
     </div>
     <div class="actions">
-      <button id="btnStop" class="btn-danger" onclick="stopTest()">⏹ Stop Test</button>
+      <button id="btnStop" class="btn-danger" style="display: none;" onclick="stopTest()">⏹ Stop Test</button>
       <button class="btn-secondary" onclick="runAgain()">▶ Run Again</button>
       <button onclick="analyzeWithAI()">✨ Analyze with AI</button>
     </div>
@@ -378,11 +440,11 @@ export class DashboardPanel {
     </div>
     <div class="card">
       <div class="card-label">Avg Latency</div>
-      <div id="valAvgLatency" class="card-val">0ms</div>
+      <div id="valAvgLatency" class="card-val">0.0ms</div>
     </div>
     <div class="card">
       <div class="card-label">p95 Latency</div>
-      <div id="valP95" class="card-val">0ms</div>
+      <div id="valP95" class="card-val">0.0ms</div>
     </div>
   </div>
 
@@ -400,7 +462,7 @@ export class DashboardPanel {
       <table>
         <thead>
           <tr>
-            <th>Request</th>
+            <th>Request / Name</th>
             <th>Method</th>
             <th>Count</th>
             <th>Success Rate</th>
@@ -435,6 +497,33 @@ export class DashboardPanel {
         </thead>
         <tbody id="requestInspectorBody">
           <tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting live requests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Run History Section -->
+  <div class="table-box">
+    <div class="table-title">
+      <span>📜 Run History & Past Benchmarks</span>
+      <button class="btn-secondary" style="padding: 3px 8px; font-size: 12px;" onclick="refreshHistory()">🔄 Refresh History</button>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Test Name</th>
+            <th>Total Reqs</th>
+            <th>Throughput</th>
+            <th>p95 Latency</th>
+            <th>Error Rate</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          <tr><td colspan="8" style="text-align:center; color: var(--muted); padding: 18px;">No historical runs recorded yet</td></tr>
         </tbody>
       </table>
     </div>
@@ -498,10 +587,15 @@ export class DashboardPanel {
     let totalCount = 0;
     let successCount = 0;
     let failCount = 0;
-    const maxDataPoints = 35;
+    let totalLatencySum = 0;
+    let allLatencies = [];
+    let testStartTime = null;
+    let liveEndpoints = {};
+    const maxDataPoints = 40;
     const inspectedRequests = [];
+    let runHistoryList = [];
 
-    // Charts: Latency Timeline only (Pie chart removed)
+    // Charts: Latency Timeline
     const latencyCtx = document.getElementById('liveLatencyChart');
     const latencyChart = new Chart(latencyCtx, {
       type: 'line',
@@ -542,44 +636,119 @@ export class DashboardPanel {
         updateStatus(msg.data);
       } else if (msg.type === 'log') {
         appendLog(msg.data);
+      } else if (msg.type === 'history') {
+        handleHistory(msg.data);
       }
     });
+
+    // Request history on load
+    vscode.postMessage({ command: 'getHistory' });
+
+    function resetLiveMetrics() {
+      totalCount = 0;
+      successCount = 0;
+      failCount = 0;
+      totalLatencySum = 0;
+      allLatencies = [];
+      testStartTime = Date.now();
+      liveEndpoints = {};
+      inspectedRequests.length = 0;
+      document.getElementById('valTotal').innerText = '0';
+      document.getElementById('valRPS').innerText = '0.0';
+      document.getElementById('valSuccessRate').innerText = '100%';
+      document.getElementById('valAvgLatency').innerText = '0.0ms';
+      document.getElementById('valP95').innerText = '0.0ms';
+      document.getElementById('inspectorCounter').innerText = '0 inspected';
+      document.getElementById('requestInspectorBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting live requests...</td></tr>';
+      document.getElementById('endpointTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting endpoint stats...</td></tr>';
+      latencyChart.data.labels = [];
+      latencyChart.data.datasets[0].data = [];
+      latencyChart.update();
+    }
 
     function updateStatus(status) {
       const badge = document.getElementById('statusBadge');
       badge.innerText = status;
+      const btnStop = document.getElementById('btnStop');
       if (status === 'RUNNING') {
+        resetLiveMetrics();
         badge.style.background = 'rgba(56, 189, 248, 0.2)';
         badge.style.color = '#38bdf8';
-        document.getElementById('btnStop').style.display = 'inline-flex';
+        btnStop.style.display = 'inline-flex';
       } else if (status === 'STOPPED') {
         badge.style.background = 'rgba(245, 158, 11, 0.2)';
         badge.style.color = '#f59e0b';
+        btnStop.style.display = 'none';
       } else if (status === 'PASSED') {
         badge.style.background = 'rgba(34, 197, 94, 0.2)';
         badge.style.color = '#22c55e';
+        btnStop.style.display = 'none';
       } else if (status === 'FAILED') {
         badge.style.background = 'rgba(239, 68, 68, 0.2)';
         badge.style.color = '#ef4444';
+        btnStop.style.display = 'none';
+      } else {
+        btnStop.style.display = 'none';
       }
     }
 
+    function calculateP95(arr) {
+      if (!arr || arr.length === 0) return 0;
+      const sorted = [...arr].sort((a, b) => a - b);
+      const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+      return sorted[idx];
+    }
+
+    function formatLatency(val) {
+      if (val === undefined || val === null) return '0.0ms';
+      const num = Number(val);
+      if (isNaN(num)) return String(val);
+      // Nanoseconds (> 1,000,000)
+      if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'ms';
+      }
+      // Microseconds
+      if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'ms';
+      }
+      return num.toFixed(1) + 'ms';
+    }
+
     function handleMetric(m) {
+      if (!testStartTime) {
+        testStartTime = Date.now();
+      }
       totalCount++;
       if (m.success) { successCount++; } else { failCount++; }
+      const lat = m.latency_ms || 0;
+      totalLatencySum += lat;
+      allLatencies.push(lat);
 
       document.getElementById('valTotal').innerText = totalCount;
       const rate = ((successCount / totalCount) * 100).toFixed(1);
       document.getElementById('valSuccessRate').innerText = rate + '%';
 
+      // Live Throughput (RPS)
+      const elapsedSec = Math.max(0.1, (Date.now() - testStartTime) / 1000);
+      document.getElementById('valRPS').innerText = (totalCount / elapsedSec).toFixed(1);
+
+      // Live Average Latency
+      document.getElementById('valAvgLatency').innerText = (totalLatencySum / totalCount).toFixed(1) + 'ms';
+
+      // Live p95 Latency
+      document.getElementById('valP95').innerText = calculateP95(allLatencies).toFixed(1) + 'ms';
+
       // Update line chart
       latencyChart.data.labels.push('');
-      latencyChart.data.datasets[0].data.push(m.latency_ms);
+      latencyChart.data.datasets[0].data.push(lat);
       if (latencyChart.data.labels.length > maxDataPoints) {
         latencyChart.data.labels.shift();
         latencyChart.data.datasets[0].data.shift();
       }
       latencyChart.update('none');
+
+      // Update live endpoint aggregation
+      updateLiveEndpoint(m);
 
       // Append to inspected requests (up to 100)
       if (inspectedRequests.length < 100 || !m.success) {
@@ -591,6 +760,57 @@ export class DashboardPanel {
       }
     }
 
+    function updateLiveEndpoint(m) {
+      const name = m.request_name || m.url || 'Request';
+      const method = m.method || 'GET';
+      const key = method + ':' + name;
+      if (!liveEndpoints[key]) {
+        liveEndpoints[key] = {
+          name: name,
+          method: method,
+          count: 0,
+          success: 0,
+          failed: 0,
+          totalLat: 0,
+          latencies: []
+        };
+      }
+      const ep = liveEndpoints[key];
+      ep.count++;
+      if (m.success) ep.success++; else ep.failed++;
+      const lat = m.latency_ms || 0;
+      ep.totalLat += lat;
+      ep.latencies.push(lat);
+
+      renderEndpointTable();
+    }
+
+    function renderEndpointTable() {
+      const tbody = document.getElementById('endpointTableBody');
+      const keys = Object.keys(liveEndpoints);
+      if (keys.length === 0) return;
+
+      tbody.innerHTML = '';
+      keys.forEach(k => {
+        const ep = liveEndpoints[k];
+        const successRate = ((ep.success / ep.count) * 100).toFixed(1);
+        const avgLat = (ep.totalLat / ep.count).toFixed(1) + 'ms';
+        const p95 = calculateP95(ep.latencies).toFixed(1) + 'ms';
+        const methodCls = 'method-' + ep.method;
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = \`
+          <td><strong>\${ep.name}</strong></td>
+          <td><span class="badge-method \${methodCls}">\${ep.method}</span></td>
+          <td>\${ep.count}</td>
+          <td>\${successRate}%</td>
+          <td>\${avgLat}</td>
+          <td>\${p95}</td>
+        \`;
+        tbody.appendChild(tr);
+      });
+    }
+
     function renderInspectorRow(m) {
       const tbody = document.getElementById('requestInspectorBody');
       if (inspectedRequests.length === 1) {
@@ -599,14 +819,13 @@ export class DashboardPanel {
 
       const tr = document.createElement('tr');
       tr.className = 'clickable';
-      const idx = inspectedRequests.indexOf(m);
       tr.onclick = () => openModal(m);
 
       const statusCls = (m.status_code >= 200 && m.status_code < 400 && m.success) ? 'badge-2xx' : 'badge-err';
       const method = m.method || 'GET';
       const methodCls = 'method-' + method;
       const urlText = m.url || m.request_name || '-';
-      const latencyText = (m.latency_ms != null ? m.latency_ms.toFixed(1) : '0') + 'ms';
+      const latencyText = (m.latency_ms != null ? m.latency_ms.toFixed(1) : '0.0') + 'ms';
 
       tr.innerHTML = \`
         <td><span class="badge-status \${statusCls}">\${m.status_code || 0}</span></td>
@@ -625,29 +844,57 @@ export class DashboardPanel {
       if (!r) return;
       updateStatus(r.passed ? 'PASSED' : 'FAILED');
 
-      document.getElementById('valTotal').innerText = r.total_requests;
-      document.getElementById('valRPS').innerText = r.requests_per_second;
-      document.getElementById('valSuccessRate').innerText = (100 - r.error_rate_percent).toFixed(1) + '%';
-      document.getElementById('valAvgLatency').innerText = (r.avg_latency / 1000000).toFixed(1) + 'ms';
-      document.getElementById('valP95').innerText = (r.p95_latency / 1000000).toFixed(1) + 'ms';
+      if (r.total_requests !== undefined) {
+        document.getElementById('valTotal').innerText = r.total_requests;
+      }
+      if (r.requests_per_second !== undefined) {
+        const rpsNum = typeof r.requests_per_second === 'number' ? r.requests_per_second.toFixed(1) : r.requests_per_second;
+        document.getElementById('valRPS').innerText = rpsNum;
+      }
+      if (r.error_rate_percent !== undefined) {
+        document.getElementById('valSuccessRate').innerText = (100 - r.error_rate_percent).toFixed(1) + '%';
+      }
+      if (r.avg_latency !== undefined) {
+        document.getElementById('valAvgLatency').innerText = formatLatency(r.avg_latency);
+      }
+      if (r.p95_latency !== undefined) {
+        document.getElementById('valP95').innerText = formatLatency(r.p95_latency);
+      }
 
-      // Endpoint breakdown
-      const tbody = document.getElementById('endpointTableBody');
-      tbody.innerHTML = '';
-      if (r.scenarios) {
+      // Endpoint breakdown from report scenarios
+      const rows = [];
+      if (r.scenarios && r.scenarios.length > 0) {
         r.scenarios.forEach(sc => {
-          if (sc.requests) {
+          if (sc.requests && sc.requests.length > 0) {
             sc.requests.forEach(req => {
-              const tr = document.createElement('tr');
-              tr.innerHTML = '<td><strong>' + req.name + '</strong></td>' +
-                '<td><span class="badge-method method-' + req.method + '">' + req.method + '</span></td>' +
-                '<td>' + req.count + '</td>' +
-                '<td>' + req.success_rate + '%</td>' +
-                '<td>' + (req.avg_latency / 1000000).toFixed(1) + 'ms</td>' +
-                '<td>' + (req.p95_latency / 1000000).toFixed(1) + 'ms</td>';
-              tbody.appendChild(tr);
+              rows.push({
+                name: req.name || req.url,
+                method: req.method || 'GET',
+                count: req.count,
+                successRate: (req.success_rate !== undefined ? req.success_rate.toFixed(1) : ((req.success / Math.max(1, req.count)) * 100).toFixed(1)) + '%',
+                avg: formatLatency(req.avg_latency),
+                p95: formatLatency(req.p95_latency)
+              });
             });
           }
+        });
+      }
+
+      if (rows.length > 0) {
+        const tbody = document.getElementById('endpointTableBody');
+        tbody.innerHTML = '';
+        rows.forEach(item => {
+          const tr = document.createElement('tr');
+          const methodCls = 'method-' + item.method;
+          tr.innerHTML = \`
+            <td><strong>\${item.name}</strong></td>
+            <td><span class="badge-method \${methodCls}">\${item.method}</span></td>
+            <td>\${item.count}</td>
+            <td>\${item.successRate}</td>
+            <td>\${item.avg}</td>
+            <td>\${item.p95}</td>
+          \`;
+          tbody.appendChild(tr);
         });
       }
 
@@ -675,6 +922,78 @@ export class DashboardPanel {
           renderInspectorRow(sampleMetric);
         });
       }
+
+      // Refresh history list so this completed run appears immediately
+      vscode.postMessage({ command: 'getHistory' });
+    }
+
+    function handleHistory(history) {
+      if (!Array.isArray(history)) return;
+      runHistoryList = history;
+
+      // Populate Run Selector dropdown
+      const sel = document.getElementById('historySelect');
+      const currentVal = sel.value;
+      sel.innerHTML = '<option value="live">● Current / Live Test</option>';
+      history.forEach((h, idx) => {
+        const opt = document.createElement('option');
+        opt.value = h.id;
+        const timeStr = h.timestamp ? new Date(h.timestamp).toLocaleTimeString() : ('Run #' + (idx + 1));
+        const badge = h.passed ? '✓' : '✗';
+        opt.innerText = \`\${badge} \${timeStr} - \${h.test_name || 'Test'} (\${h.total_requests || 0} reqs)\`;
+        sel.appendChild(opt);
+      });
+      if (currentVal && history.some(h => h.id === currentVal)) {
+        sel.value = currentVal;
+      }
+
+      // Populate Run History table
+      const tbody = document.getElementById('historyTableBody');
+      if (history.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color: var(--muted); padding: 18px;">No historical runs recorded yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      history.forEach(h => {
+        const tr = document.createElement('tr');
+        const timeDisplay = h.timestamp ? new Date(h.timestamp).toLocaleString() : h.id;
+        const statusBadge = h.passed
+          ? '<span class="badge-status badge-2xx">PASS</span>'
+          : '<span class="badge-status badge-err">FAIL</span>';
+        const rpsStr = h.rps !== undefined ? Number(h.rps).toFixed(1) + ' RPS' : '-';
+        const p95Str = h.p95_latency_ms !== undefined ? Number(h.p95_latency_ms).toFixed(1) + 'ms' : '-';
+        const errStr = h.error_rate !== undefined ? Number(h.error_rate).toFixed(1) + '%' : '-';
+
+        tr.innerHTML = \`
+          <td><strong>\${timeDisplay}</strong></td>
+          <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="\${h.test_name || '-'}">\${h.test_name || '-'}</td>
+          <td>\${h.total_requests || 0}</td>
+          <td style="color: var(--primary);">\${rpsStr}</td>
+          <td>\${p95Str}</td>
+          <td>\${errStr}</td>
+          <td>\${statusBadge}</td>
+          <td><button class="btn-secondary" style="padding: 3px 8px; font-size: 11px;" onclick="loadRunReport('\${h.id}')">Load 📊</button></td>
+        \`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function onSelectRun(runId) {
+      if (runId === 'live') {
+        updateStatus('Ready');
+      } else {
+        loadRunReport(runId);
+      }
+    }
+
+    function loadRunReport(runId) {
+      document.getElementById('historySelect').value = runId;
+      vscode.postMessage({ command: 'loadRun', runId: runId });
+    }
+
+    function refreshHistory() {
+      vscode.postMessage({ command: 'getHistory' });
     }
 
     function appendLog(line) {
@@ -710,7 +1029,7 @@ export class DashboardPanel {
       statusEl.innerText = (m.status_code || 0) + (m.success ? ' OK' : ' FAIL');
       statusEl.className = 'badge-status ' + ((m.status_code >= 200 && m.status_code < 400 && m.success) ? 'badge-2xx' : 'badge-err');
 
-      document.getElementById('modalLatency').innerText = (m.latency_ms != null ? m.latency_ms.toFixed(1) : '0') + 'ms';
+      document.getElementById('modalLatency').innerText = (m.latency_ms != null ? m.latency_ms.toFixed(1) : '0.0') + 'ms';
 
       // Request Headers
       const reqHBody = document.getElementById('modalReqHeaders');

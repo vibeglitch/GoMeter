@@ -24,16 +24,22 @@ jobs:
           cache: true
 
       - name: Run Unit Tests
-        run: go test -v ./pkg/... ./mcp/...
+        run: go test -v -mod=vendor ./pkg/... ./mcp/...
 
       - name: Build GoMeter Binary
-        run: go build -v -ldflags="-s -w" -o bin/gometer ./cmd/gometer
+        run: go build -v -mod=vendor -ldflags="-s -w" -o bin/gometer ./cmd/gometer
 
-      - name: Validate Example Test Plans
+      - name: Validate Example Test Plans (Unix)
         run: |
-          ./bin/gometer validate examples/real-dummy-apis.gometer.yaml
-          ./bin/gometer validate examples/high-concurrency.gometer.yaml
+          ./bin/gometer validate examples/data/real-dummy-apis.gometer.yaml
+          ./bin/gometer validate examples/data/high-concurrency.gometer.yaml
         if: runner.os != 'Windows'
+
+      - name: Validate Example Test Plans (Windows)
+        run: |
+          .\bin\gometer.exe validate examples\data\real-dummy-apis.gometer.yaml
+          .\bin\gometer.exe validate examples\data\high-concurrency.gometer.yaml
+        if: runner.os == 'Windows'
 
   test-extension:
     name: Test & Build VS Code Extension

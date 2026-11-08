@@ -8,8 +8,8 @@
 ## Highlights
 
 ### 1. Publisher ID Marketplace Alignment
-- Fixed VS Code Marketplace publisher ID from `naveen` to official marketplace publisher `NaveenKumarPolisetty`.
-- Resolves the extension publishing upload error: `Publisher ID 'naveen' provided in the extension manifest should match the publisher ID 'NaveenKumarPolisetty'`.
+- Fixed VS Code Marketplace publisher ID from `naveen` to official marketplace publisher `vibeglitch-sdlc`.
+- Resolves the extension publishing upload error: `Publisher ID 'naveen' provided in the extension manifest should match the publisher ID 'vibeglitch-sdlc'`.
 
 ### 2. Rich Test Results Hover Tooltips on Files & Folders
 - **Folder Test Results on Hover**:

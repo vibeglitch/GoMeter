@@ -25,8 +25,9 @@
 
 | Artifact | SHA256 Checksum |
 |---|---|
-| `gometer-1.6.2.vsix` | See checksums.txt |
+| `gometer-runner-1.6.2.vsix` | See checksums.txt |
 | `gometer-v1.6.2-linux-amd64.tar.gz` | See checksums.txt |
 | `gometer-v1.6.2-windows-amd64.zip` | See checksums.txt |
 | `gometer-v1.6.2-darwin-arm64.tar.gz` | See checksums.txt |
 | `gometer-v1.6.2-darwin-amd64.tar.gz` | See checksums.txt |
+

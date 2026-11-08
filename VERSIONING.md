@@ -44,7 +44,7 @@ All modules in this repository **must remain synchronized** on the identical ver
 | `cmd/gometer/main.go` | `var version` | `1.6.2` |
 | `mcp/server.go` | `Implementation.Version` | `1.6.2` |
 | `vscode-extension/package.json` | `"version"` | `1.6.2` |
-| VSIX Artifact | `gometer-<version>.vsix` | `gometer-1.6.2.vsix` |
+| VSIX Artifact | `gometer-runner-<version>.vsix` | `gometer-runner-1.6.2.vsix` |
 
 Whenever a new release or version bump is prepared, all four locations **MUST** be updated simultaneously to prevent divergence between the CLI, the MCP server, and the VS Code extension.
 

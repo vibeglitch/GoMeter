@@ -25,7 +25,7 @@ vsix:
 	GOOS=darwin GOARCH=arm64 $(GO) build -mod=vendor -ldflags="-s -w" -o vscode-extension/bin/gometer-darwin-arm64 ./cmd/gometer
 	GOOS=darwin GOARCH=amd64 $(GO) build -mod=vendor -ldflags="-s -w" -o vscode-extension/bin/gometer-darwin-amd64 ./cmd/gometer
 	@cd vscode-extension && npm run build && npx @vscode/vsce package --no-dependencies
-	@cp vscode-extension/gometer-$(VERSION).vsix ./
+	@cp vscode-extension/gometer-runner-$(VERSION).vsix ./
 
 release: test
 	@mkdir -p release/v$(VERSION)/build_tmp bin vscode-extension/bin
@@ -50,10 +50,10 @@ release: test
 	rm -f release/v$(VERSION)/build_tmp/gometer
 	rm -rf release/v$(VERSION)/build_tmp
 	@cd vscode-extension && npm run build && npx @vscode/vsce package --no-dependencies
-	@cp vscode-extension/gometer-$(VERSION).vsix release/v$(VERSION)/
-	@cp vscode-extension/gometer-$(VERSION).vsix release/
-	@cp vscode-extension/gometer-$(VERSION).vsix ./
-	@(cd release/v$(VERSION) && sha256sum gometer-* > checksums.txt)
+	@cp vscode-extension/gometer-runner-$(VERSION).vsix release/v$(VERSION)/
+	@cp vscode-extension/gometer-runner-$(VERSION).vsix release/
+	@cp vscode-extension/gometer-runner-$(VERSION).vsix ./
+	@(cd release/v$(VERSION) && sha256sum * > checksums.txt)
 	@echo "Release v$(VERSION) packaged successfully in release/v$(VERSION)/"
 clean:
 	@rm -rf bin reports vscode-extension/dist vscode-extension/*.vsix

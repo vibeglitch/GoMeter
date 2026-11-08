@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Extension Dependencies
         run: cd vscode-extension && npm ci
@@ -85,7 +85,7 @@ jobs:
       - name: Publish to VS Code Marketplace (Trusted Publishing)
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
-          npx @vscode/vsce publish --packagePath dist/gometer-runner-${VERSION}.vsix
+          npx --yes @vscode/vsce@latest publish --oidc --packagePath dist/gometer-runner-${VERSION}.vsix
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

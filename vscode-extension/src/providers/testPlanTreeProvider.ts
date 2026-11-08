@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const IGNORED_DIRS = new Set([
+export const IGNORED_DIRS = new Set([
   'node_modules',
   '.git',
   'dist',
@@ -15,7 +15,7 @@ const IGNORED_DIRS = new Set([
   'coverage',
 ]);
 
-function isGoMeterTestFile(filePath: string): boolean {
+export function isGoMeterTestFile(filePath: string): boolean {
   try {
     if (!fs.existsSync(filePath)) return false;
     const stat = fs.statSync(filePath);
@@ -33,7 +33,7 @@ function isGoMeterTestFile(filePath: string): boolean {
   }
 }
 
-function containsTestPlans(dirPath: string): boolean {
+export function containsTestPlans(dirPath: string): boolean {
   try {
     if (!fs.existsSync(dirPath)) return false;
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -52,6 +52,35 @@ function containsTestPlans(dirPath: string): boolean {
     // Ignore filesystem read errors
   }
   return false;
+}
+
+export function findAllTestPlans(dirPath: string): string[] {
+  const results: string[] = [];
+  try {
+    if (!fs.existsSync(dirPath)) return results;
+    const stat = fs.statSync(dirPath);
+    if (stat.isFile()) {
+      if (isGoMeterTestFile(dirPath)) {
+        results.push(dirPath);
+      }
+      return results;
+    }
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.name.startsWith('.') || IGNORED_DIRS.has(entry.name)) {
+        continue;
+      }
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        results.push(...findAllTestPlans(fullPath));
+      } else if (entry.isFile() && isGoMeterTestFile(fullPath)) {
+        results.push(fullPath);
+      }
+    }
+  } catch {
+    // Ignore filesystem read errors
+  }
+  return results.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
 export class TestPlanItem extends vscode.TreeItem {

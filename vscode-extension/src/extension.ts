@@ -7,6 +7,7 @@ import { DashboardPanel } from './views/dashboardPanel';
 import { registerRunTestCommand } from './commands/runTest';
 import { registerGenerateTestCommand } from './commands/generateTest';
 import { registerAnalyzeResultsCommand } from './commands/analyzeResults';
+import { ExportCsvService } from './services/exportCsvService';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -233,6 +234,43 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         vscode.window.showErrorMessage('Failed to initialize test plan.');
       }
+    })
+  );
+
+  // CSV Export Service
+  const csvExporter = new ExportCsvService(bridge);
+
+  // Command: Export Test Plan as CSV
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gometer.exportPlanAsCsv', async (item?: TestPlanItem) => {
+      let filePath = item?.filePath;
+      if (!filePath && vscode.window.activeTextEditor) {
+        const activeDocPath = vscode.window.activeTextEditor.document.uri.fsPath;
+        if (activeDocPath.endsWith('.yaml') || activeDocPath.endsWith('.yml')) {
+          filePath = activeDocPath;
+        }
+      }
+      if (!filePath) {
+        vscode.window.showErrorMessage('No test plan selected to export.');
+        return;
+      }
+      await csvExporter.exportTestPlan(filePath);
+    })
+  );
+
+  // Command: Export Folder as CSV
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gometer.exportFolderAsCsv', async (item?: TestPlanItem) => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      let folderPath = item?.filePath;
+      if (!folderPath && workspaceFolders && workspaceFolders.length > 0) {
+        folderPath = workspaceFolders[0].uri.fsPath;
+      }
+      if (!folderPath) {
+        vscode.window.showErrorMessage('No folder selected to export.');
+        return;
+      }
+      await csvExporter.exportFolder(folderPath);
     })
   );
 }

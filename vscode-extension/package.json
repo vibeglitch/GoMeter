@@ -2,7 +2,7 @@
   "name": "gometer",
   "displayName": "GoMeter - High Performance API Testing & Load Testing",
   "description": "Go-powered JMeter alternative for API testing, load testing, real-time metrics, LLM generation, and MCP support.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "publisher": "naveen",
   "repository": {
     "type": "git",
@@ -108,6 +108,16 @@
         "command": "gometer.deleteTestPlan",
         "title": "GoMeter: Delete",
         "icon": "$(trash)"
+      },
+      {
+        "command": "gometer.exportPlanAsCsv",
+        "title": "GoMeter: Export Test Plan as CSV...",
+        "icon": "$(export)"
+      },
+      {
+        "command": "gometer.exportFolderAsCsv",
+        "title": "GoMeter: Export Folder as CSV...",
+        "icon": "$(export)"
       }
     ],
     "menus": {
@@ -136,6 +146,11 @@
           "command": "gometer.openDashboard",
           "when": "view == gometer.testPlansView",
           "group": "navigation@3"
+        },
+        {
+          "command": "gometer.exportFolderAsCsv",
+          "when": "view == gometer.testPlansView",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [
@@ -148,6 +163,26 @@
           "command": "gometer.newFolder",
           "when": "viewItem == testPlanFolder",
           "group": "inline@2"
+        },
+        {
+          "command": "gometer.exportFolderAsCsv",
+          "when": "viewItem == testPlanFolder",
+          "group": "inline@3"
+        },
+        {
+          "command": "gometer.newTestPlanInFolder",
+          "when": "viewItem == testPlanFolder",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "gometer.newFolder",
+          "when": "viewItem == testPlanFolder",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "gometer.exportFolderAsCsv",
+          "when": "viewItem == testPlanFolder",
+          "group": "1_actions@3"
         },
         {
           "command": "gometer.deleteTestPlan",
@@ -165,6 +200,26 @@
           "group": "inline@2"
         },
         {
+          "command": "gometer.exportPlanAsCsv",
+          "when": "viewItem == testPlanFile",
+          "group": "inline@3"
+        },
+        {
+          "command": "gometer.runTestFile",
+          "when": "viewItem == testPlanFile",
+          "group": "1_actions@1"
+        },
+        {
+          "command": "gometer.validateTestPlan",
+          "when": "viewItem == testPlanFile",
+          "group": "1_actions@2"
+        },
+        {
+          "command": "gometer.exportPlanAsCsv",
+          "when": "viewItem == testPlanFile",
+          "group": "1_actions@3"
+        },
+        {
           "command": "gometer.deleteTestPlan",
           "when": "viewItem == testPlanFile",
           "group": "2_delete"
@@ -174,7 +229,12 @@
         {
           "command": "gometer.runActiveTest",
           "when": "resourceExtname == .yaml || resourceExtname == .yml",
-          "group": "navigation"
+          "group": "navigation@0"
+        },
+        {
+          "command": "gometer.exportPlanAsCsv",
+          "when": "resourceExtname == .yaml || resourceExtname == .yml",
+          "group": "navigation@1"
         }
       ]
     },
@@ -227,6 +287,7 @@
     "@types/vscode": "^1.90.0",
     "@vscode/vsce": "^3.2.0",
     "esbuild": "^0.25.0",
+    "js-yaml": "^4.1.0",
     "typescript": "^5.7.0"
   }
 }

@@ -1,0 +1,5 @@
+5724070e19db1a5c78bbc92d26e708221cec364f98e2f195fe92bf3c0c536cc3  gometer-1.5.1.vsix
+d8ca3906b9311934b1e9351c99beaf44310adfb49de6b119ebda91407d2b72e8  gometer-v1.5.1-darwin-amd64.tar.gz
+6c49bace3508553bf39cfbadbe203301affa01a97d2f0118d97e1ecd73f90094  gometer-v1.5.1-darwin-arm64.tar.gz
+4bd0d81b8cd0466b448e5da63bfdf3c12e9bb036acc97209be6c9c53e8bfb5fa  gometer-v1.5.1-linux-amd64.tar.gz
+edfba1098522c9ff5bbc4cb0ee02379b6bf8a28db6c7e482eef1b377e75a2c0c  gometer-v1.5.1-windows-amd64.zip

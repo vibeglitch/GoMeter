@@ -2,8 +2,8 @@
   "name": "gometer",
   "displayName": "GoMeter - High Performance API Testing & Load Testing",
   "description": "Go-powered JMeter alternative for API testing, load testing, real-time metrics, LLM generation, and MCP support.",
-  "version": "1.5.0",
-  "publisher": "naveen",
+  "version": "1.5.1",
+  "publisher": "NaveenKumarPolisetty",
   "repository": {
     "type": "git",
     "url": "https://github.com/vibeglitch/GoMeter"
@@ -111,12 +111,12 @@
       },
       {
         "command": "gometer.exportPlanAsCsv",
-        "title": "GoMeter: Export Test Plan as CSV...",
+        "title": "GoMeter: Export Test Results as CSV...",
         "icon": "$(export)"
       },
       {
         "command": "gometer.exportFolderAsCsv",
-        "title": "GoMeter: Export Folder as CSV...",
+        "title": "GoMeter: Export Folder Test Results as CSV...",
         "icon": "$(export)"
       }
     ],

@@ -63,21 +63,45 @@ export class GoMeterBridge {
       }
     }
 
-    // 3. Bundled binary inside the installed VS Code extension
+    // 3. Bundled binary inside the installed VS Code extension (Universal cross-platform support)
     if (this.extensionContext) {
-      const bundledBin = this.extensionContext.asAbsolutePath(
-        path.join('bin', process.platform === 'win32' ? 'gometer.exe' : 'gometer')
-      );
-      if (fs.existsSync(bundledBin)) {
-        try {
-          // Ensure executable permissions on Linux/macOS
-          if (process.platform !== 'win32') {
-            fs.chmodSync(bundledBin, 0o755);
-          }
-        } catch {
-          // Ignore permission set error if read-only
+      const platform = process.platform;
+      const arch = process.arch;
+      let candidateNames: string[] = [];
+
+      if (platform === 'win32') {
+        candidateNames = ['gometer.exe', 'gometer-windows-amd64.exe'];
+      } else if (platform === 'darwin') {
+        if (arch === 'arm64') {
+          // macOS Apple Silicon (M1/M2/M3/M4) with Intel Rosetta fallback
+          candidateNames = ['gometer-darwin-arm64', 'gometer-darwin-amd64', 'gometer'];
+        } else {
+          // macOS Intel
+          candidateNames = ['gometer-darwin-amd64', 'gometer'];
         }
-        return bundledBin;
+      } else if (platform === 'linux') {
+        if (arch === 'arm64') {
+          candidateNames = ['gometer-linux-arm64', 'gometer-linux-amd64', 'gometer'];
+        } else {
+          candidateNames = ['gometer-linux-amd64', 'gometer'];
+        }
+      } else {
+        candidateNames = ['gometer'];
+      }
+
+      for (const candidate of candidateNames) {
+        const bundledBin = this.extensionContext.asAbsolutePath(path.join('bin', candidate));
+        if (fs.existsSync(bundledBin)) {
+          try {
+            // Ensure executable permissions on Linux/macOS
+            if (platform !== 'win32') {
+              fs.chmodSync(bundledBin, 0o755);
+            }
+          } catch {
+            // Ignore permission set error if read-only
+          }
+          return bundledBin;
+        }
       }
     }
 

@@ -49,3 +49,4 @@ scenarios:              # Required. List of scenario definitions
         value: number
         unit: string    # "ms", "%", "rps"
 ```
+

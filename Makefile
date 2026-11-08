@@ -1,6 +1,6 @@
 .PHONY: all build test clean vsix release
 
-VERSION ?= 1.3.1
+VERSION ?= 1.4.0
 TOOLS_DIR := $(CURDIR)/.tools
 GO := $(TOOLS_DIR)/go/bin/go
 export PATH := $(TOOLS_DIR)/go/bin:$(PATH)

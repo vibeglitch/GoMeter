@@ -58,9 +58,6 @@ export class DashboardPanel {
               this.sendHistory(this._bridge.getRunHistory());
             }
             break;
-          case 'analyzeWithAI':
-            vscode.commands.executeCommand('gometer.analyzeReportWithAI');
-            break;
           case 'runAgain':
             vscode.commands.executeCommand('gometer.runActiveTest');
             break;
@@ -424,7 +421,7 @@ export class DashboardPanel {
     .btn-danger:hover { background: #b91c1c; }
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
       gap: 12px;
       margin-bottom: 20px;
     }
@@ -760,7 +757,6 @@ export class DashboardPanel {
     <div class="actions">
       <button id="btnStop" class="btn-danger" style="display: none;" onclick="stopTest()">⏹ Stop Test</button>
       <button class="btn-secondary" onclick="runAgain()">▶ Run Again</button>
-      <button onclick="analyzeWithAI()">✨ Analyze with AI</button>
     </div>
   </div>
 
@@ -778,12 +774,32 @@ export class DashboardPanel {
       <div id="valSuccessRate" class="card-val" style="color: var(--success);">100%</div>
     </div>
     <div class="card">
+      <div class="card-label">Time Taken</div>
+      <div id="valDuration" class="card-val" style="color: #38bdf8;">0.0s</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Min Latency</div>
+      <div id="valMin" class="card-val" style="color: #10b981;">0.0ms</div>
+    </div>
+    <div class="card">
       <div class="card-label">Avg Latency</div>
-      <div id="valAvgLatency" class="card-val">0.0ms</div>
+      <div id="valAvgLatency" class="card-val" style="color: #60a5fa;">0.0ms</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Max Latency</div>
+      <div id="valMax" class="card-val" style="color: #f97316;">0.0ms</div>
+    </div>
+    <div class="card">
+      <div class="card-label">p90 Latency</div>
+      <div id="valP90" class="card-val" style="color: #a855f7;">0.0ms</div>
     </div>
     <div class="card">
       <div class="card-label">p95 Latency</div>
-      <div id="valP95" class="card-val">0.0ms</div>
+      <div id="valP95" class="card-val" style="color: #818cf8;">0.0ms</div>
+    </div>
+    <div class="card">
+      <div class="card-label">p99 Latency</div>
+      <div id="valP99" class="card-val" style="color: #f43f5e;">0.0ms</div>
     </div>
   </div>
 
@@ -801,7 +817,10 @@ export class DashboardPanel {
 
   <div class="charts">
     <div class="chart-box">
-      <div class="card-label">Real-Time Response Latency Timeline (ms)</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <div class="card-label" style="margin-bottom: 0;">Real-Time Response Latency Timeline (ms)</div>
+        <div id="chartPointsCount" style="font-size: 11px; color: var(--muted); font-family: monospace;">0 requests</div>
+      </div>
       <div class="chart-wrapper">
         <canvas id="liveLatencyChart"></canvas>
       </div>
@@ -819,12 +838,16 @@ export class DashboardPanel {
             <th>Method</th>
             <th>Count</th>
             <th>Success Rate</th>
-            <th>Avg Latency</th>
-            <th>p95 Latency</th>
+            <th>Min</th>
+            <th>Avg</th>
+            <th>Max</th>
+            <th>p90</th>
+            <th>p95</th>
+            <th>p99</th>
           </tr>
         </thead>
         <tbody id="endpointTableBody">
-          <tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">No test execution data yet</td></tr>
+          <tr><td colspan="10" style="text-align:center; color: var(--muted); padding: 18px;">No test execution data yet</td></tr>
         </tbody>
       </table>
     </div>
@@ -962,14 +985,16 @@ export class DashboardPanel {
     let failCount = 0;
     let totalLatencySum = 0;
     let allLatencies = [];
+    let minLatency = Infinity;
+    let maxLatency = 0;
     let testStartTime = null;
+    let liveDurationTimer = null;
     let liveEndpoints = {};
-    const maxDataPoints = 40;
     const latencyHistory = [];
     const inspectedRequests = [];
     let runHistoryList = [];
 
-    // Native HTML5 Canvas Line Chart (Dependency-free & 100% Offline-Safe)
+    // Native HTML5 Canvas Line Chart (Dependency-free, High-Performance & 100% Offline-Safe)
     function renderNativeLatencyChart() {
       const canvas = document.getElementById('liveLatencyChart');
       if (!canvas) return;
@@ -990,71 +1015,124 @@ export class DashboardPanel {
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let y = 30; y < h - 15; y += 38) {
-        ctx.moveTo(35, y);
-        ctx.lineTo(w - 10, y);
+      for (let y = 25; y < h - 22; y += 38) {
+        ctx.moveTo(45, y);
+        ctx.lineTo(w - 15, y);
       }
       ctx.stroke();
 
       if (latencyHistory.length === 0) {
         ctx.fillStyle = '#64748b';
         ctx.font = '12px sans-serif';
-        ctx.fillText('Awaiting latency metrics...', 40, h / 2);
+        ctx.fillText('Awaiting latency metrics...', 50, h / 2);
         return;
       }
 
+      const N = latencyHistory.length;
       const maxVal = Math.max(10, ...latencyHistory) * 1.15;
 
       // Y-axis labels
       ctx.fillStyle = '#94a3b8';
       ctx.font = '10px monospace';
-      ctx.fillText(maxVal.toFixed(0) + 'ms', 4, 30);
-      ctx.fillText((maxVal / 2).toFixed(0) + 'ms', 4, h / 2);
-      ctx.fillText('0ms', 12, h - 18);
+      ctx.fillText(maxVal.toFixed(0) + 'ms', 4, 25);
+      ctx.fillText((maxVal / 2).toFixed(0) + 'ms', 4, (h - 25) / 2 + 10);
+      ctx.fillText('0ms', 14, h - 22);
 
-      const startX = 40;
-      const plotW = w - startX - 10;
-      const stepX = latencyHistory.length > 1 ? plotW / (latencyHistory.length - 1) : plotW;
+      const startX = 45;
+      const plotW = w - startX - 15;
+      const stepX = N > 1 ? plotW / (N - 1) : plotW;
+
+      // X-axis guide labels (Start, Mid, End)
+      ctx.fillStyle = '#64748b';
+      ctx.font = '9px monospace';
+      ctx.fillText('#1', startX, h - 6);
+      if (N > 10) {
+        const midText = '#' + Math.floor(N / 2);
+        ctx.fillText(midText, startX + plotW / 2 - 12, h - 6);
+      }
+      const endText = '#' + N;
+      ctx.fillText(endText, w - 15 - ctx.measureText(endText).width, h - 6);
 
       // Gradient Fill
       ctx.beginPath();
-      latencyHistory.forEach((val, i) => {
+      for (let i = 0; i < N; i++) {
+        const val = latencyHistory[i];
         const x = startX + i * stepX;
-        const y = h - 20 - (val / maxVal) * (h - 45);
+        const y = h - 22 - (val / maxVal) * (h - 50);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
-      });
-      const lastX = startX + (latencyHistory.length - 1) * stepX;
-      ctx.lineTo(lastX, h - 20);
-      ctx.lineTo(startX, h - 20);
+      }
+      const lastX = startX + (N - 1) * stepX;
+      ctx.lineTo(lastX, h - 22);
+      ctx.lineTo(startX, h - 22);
       ctx.closePath();
-      const grad = ctx.createLinearGradient(0, 0, 0, h);
-      grad.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+      const grad = ctx.createLinearGradient(0, 0, 0, h - 22);
+      grad.addColorStop(0, 'rgba(56, 189, 248, 0.28)');
       grad.addColorStop(1, 'rgba(56, 189, 248, 0.0)');
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Line Stroke
+      // Line Stroke (scales line thickness dynamically to keep high-frequency lines crisp)
       ctx.beginPath();
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
-      latencyHistory.forEach((val, i) => {
+      ctx.lineWidth = N > 300 ? 1.0 : (N > 100 ? 1.4 : 2.0);
+      for (let i = 0; i < N; i++) {
+        const val = latencyHistory[i];
         const x = startX + i * stepX;
-        const y = h - 20 - (val / maxVal) * (h - 45);
+        const y = h - 22 - (val / maxVal) * (h - 50);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
-      });
+      }
       ctx.stroke();
 
-      // Data Points
-      ctx.fillStyle = '#38bdf8';
-      latencyHistory.forEach((val, i) => {
-        const x = startX + i * stepX;
-        const y = h - 20 - (val / maxVal) * (h - 45);
-        ctx.beginPath();
-        ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      // Data Points - dynamically scaled as length increases to prevent visual clutter
+      if (N <= 60) {
+        ctx.fillStyle = '#38bdf8';
+        for (let i = 0; i < N; i++) {
+          const val = latencyHistory[i];
+          const x = startX + i * stepX;
+          const y = h - 22 - (val / maxVal) * (h - 50);
+          ctx.beginPath();
+          ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (N <= 200) {
+        ctx.fillStyle = '#38bdf8';
+        for (let i = 0; i < N; i++) {
+          const val = latencyHistory[i];
+          const x = startX + i * stepX;
+          const y = h - 22 - (val / maxVal) * (h - 50);
+          ctx.beginPath();
+          ctx.arc(x, y, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Attach mouse scrubbing for interactive point inspection
+      if (!canvas._hasHoverListener) {
+        canvas._hasHoverListener = true;
+        canvas.addEventListener('mousemove', (e) => {
+          if (latencyHistory.length === 0) return;
+          const cRect = canvas.getBoundingClientRect();
+          const mouseX = e.clientX - cRect.left;
+          const sX = 45;
+          const pW = cRect.width - sX - 15;
+          const totalPts = latencyHistory.length;
+          if (mouseX < sX || mouseX > sX + pW) return;
+          const idx = Math.min(totalPts - 1, Math.max(0, Math.round(((mouseX - sX) / pW) * (totalPts - 1))));
+          const latVal = latencyHistory[idx];
+          const counterEl = document.getElementById('chartPointsCount');
+          if (counterEl) {
+            counterEl.innerText = 'Req #' + (idx + 1) + ': ' + latVal.toFixed(1) + 'ms (' + totalPts + ' total)';
+          }
+        });
+        canvas.addEventListener('mouseleave', () => {
+          const counterEl = document.getElementById('chartPointsCount');
+          if (counterEl) {
+            counterEl.innerText = latencyHistory.length + ' requests';
+          }
+        });
+      }
     }
 
     window.addEventListener('resize', () => {
@@ -1067,6 +1145,8 @@ export class DashboardPanel {
       failCount = 0;
       totalLatencySum = 0;
       allLatencies = [];
+      minLatency = Infinity;
+      maxLatency = 0;
       testStartTime = Date.now();
       liveEndpoints = {};
       latencyHistory.length = 0;
@@ -1076,18 +1156,38 @@ export class DashboardPanel {
       document.getElementById('valTotal').innerText = '0';
       document.getElementById('valRPS').innerText = '0.0';
       document.getElementById('valSuccessRate').innerText = '100%';
+      document.getElementById('valDuration').innerText = '0.0s';
+      document.getElementById('valMin').innerText = '0.0ms';
       document.getElementById('valAvgLatency').innerText = '0.0ms';
+      document.getElementById('valMax').innerText = '0.0ms';
+      document.getElementById('valP90').innerText = '0.0ms';
       document.getElementById('valP95').innerText = '0.0ms';
+      document.getElementById('valP99').innerText = '0.0ms';
+      const chartCount = document.getElementById('chartPointsCount');
+      if (chartCount) chartCount.innerText = '0 requests';
       document.getElementById('inspectorCounter').innerText = '0 inspected';
       document.getElementById('requestInspectorBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting live requests...</td></tr>';
-      document.getElementById('endpointTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting endpoint stats...</td></tr>';
+      document.getElementById('endpointTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color: var(--muted); padding: 18px;">Awaiting endpoint stats...</td></tr>';
       renderNativeLatencyChart();
+
+      if (liveDurationTimer) clearInterval(liveDurationTimer);
+      liveDurationTimer = setInterval(() => {
+        if (currentStatus === 'RUNNING' && testStartTime) {
+          const elapsed = (Date.now() - testStartTime) / 1000;
+          const durEl = document.getElementById('valDuration');
+          if (durEl) durEl.innerText = elapsed.toFixed(1) + 's';
+        }
+      }, 400);
     }
 
     let currentStatus = 'Ready';
 
     function updateStatus(status) {
       currentStatus = status;
+      if (status !== 'RUNNING' && liveDurationTimer) {
+        clearInterval(liveDurationTimer);
+        liveDurationTimer = null;
+      }
       const badge = document.getElementById('statusBadge');
       badge.innerText = status;
       const btnStop = document.getElementById('btnStop');
@@ -1115,22 +1215,38 @@ export class DashboardPanel {
       }
     }
 
-    function calculateP95(arr) {
+    function calculatePercentile(arr, pct) {
       if (!arr || arr.length === 0) return 0;
       const sorted = [...arr].sort((a, b) => a - b);
-      const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95));
+      const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(sorted.length * pct)));
       return sorted[idx];
+    }
+
+    function formatDuration(val) {
+      if (val === undefined || val === null) return '0.0s';
+      const num = Number(val);
+      if (isNaN(num)) return String(val);
+      if (num >= 1e9) {
+        return (num / 1e9).toFixed(2) + 's';
+      }
+      if (num >= 1e6) {
+        return (num / 1e6).toFixed(1) + 'ms';
+      }
+      return num.toFixed(1) + 's';
     }
 
     function formatLatency(val) {
       if (val === undefined || val === null) return '0.0ms';
       const num = Number(val);
       if (isNaN(num)) return String(val);
-      if (num >= 1000000) {
-        return (num / 1000000).toFixed(1) + 'ms';
+      if (num >= 1e9) {
+        return (num / 1e9).toFixed(2) + 's';
       }
-      if (num >= 1000) {
-        return (num / 1000).toFixed(1) + 'ms';
+      if (num >= 1e6) {
+        return (num / 1e6).toFixed(1) + 'ms';
+      }
+      if (num >= 1e3 && num % 1 === 0) {
+        return (num / 1e6).toFixed(2) + 'ms';
       }
       return num.toFixed(1) + 'ms';
     }
@@ -1145,25 +1261,34 @@ export class DashboardPanel {
       totalLatencySum += lat;
       allLatencies.push(lat);
 
+      if (lat < minLatency) minLatency = lat;
+      if (lat > maxLatency) maxLatency = lat;
+
       document.getElementById('valTotal').innerText = totalCount;
       const rate = ((successCount / totalCount) * 100).toFixed(1);
       document.getElementById('valSuccessRate').innerText = rate + '%';
 
-      // Live Throughput (RPS)
+      // Live Time Taken (Duration)
       const elapsedSec = Math.max(0.1, (Date.now() - testStartTime) / 1000);
+      document.getElementById('valDuration').innerText = elapsedSec.toFixed(1) + 's';
+
+      // Live Throughput (RPS)
       document.getElementById('valRPS').innerText = (totalCount / elapsedSec).toFixed(1);
 
-      // Live Average Latency
+      // Live Min, Avg, Max Latency
+      document.getElementById('valMin').innerText = (minLatency !== Infinity ? minLatency.toFixed(1) : '0.0') + 'ms';
       document.getElementById('valAvgLatency').innerText = (totalLatencySum / totalCount).toFixed(1) + 'ms';
+      document.getElementById('valMax').innerText = maxLatency.toFixed(1) + 'ms';
 
-      // Live p95 Latency
-      document.getElementById('valP95').innerText = calculateP95(allLatencies).toFixed(1) + 'ms';
+      // Live Percentiles: p90, p95, p99
+      document.getElementById('valP90').innerText = calculatePercentile(allLatencies, 0.90).toFixed(1) + 'ms';
+      document.getElementById('valP95').innerText = calculatePercentile(allLatencies, 0.95).toFixed(1) + 'ms';
+      document.getElementById('valP99').innerText = calculatePercentile(allLatencies, 0.99).toFixed(1) + 'ms';
 
-      // Update native timeline chart
+      // Update native timeline chart: KEEP ALL REQUESTS, shrink dynamically!
       latencyHistory.push(lat);
-      if (latencyHistory.length > maxDataPoints) {
-        latencyHistory.shift();
-      }
+      const chartCount = document.getElementById('chartPointsCount');
+      if (chartCount) chartCount.innerText = latencyHistory.length + ' requests';
       renderNativeLatencyChart();
 
       // Update live endpoint aggregation
@@ -1191,6 +1316,8 @@ export class DashboardPanel {
           success: 0,
           failed: 0,
           totalLat: 0,
+          minLat: Infinity,
+          maxLat: 0,
           latencies: []
         };
       }
@@ -1200,6 +1327,8 @@ export class DashboardPanel {
       const lat = m.latency_ms || 0;
       ep.totalLat += lat;
       ep.latencies.push(lat);
+      if (lat < ep.minLat) ep.minLat = lat;
+      if (lat > ep.maxLat) ep.maxLat = lat;
 
       renderEndpointTable();
     }
@@ -1212,9 +1341,13 @@ export class DashboardPanel {
       tbody.innerHTML = '';
       keys.forEach(k => {
         const ep = liveEndpoints[k];
-        const successRate = ((ep.success / ep.count) * 100).toFixed(1);
-        const avgLat = (ep.totalLat / ep.count).toFixed(1) + 'ms';
-        const p95 = calculateP95(ep.latencies).toFixed(1) + 'ms';
+        const successRate = ((ep.success / Math.max(1, ep.count)) * 100).toFixed(1);
+        const minLat = (ep.minLat !== Infinity ? ep.minLat.toFixed(1) : '0.0') + 'ms';
+        const avgLat = (ep.totalLat / Math.max(1, ep.count)).toFixed(1) + 'ms';
+        const maxLat = ep.maxLat.toFixed(1) + 'ms';
+        const p90 = calculatePercentile(ep.latencies, 0.90).toFixed(1) + 'ms';
+        const p95 = calculatePercentile(ep.latencies, 0.95).toFixed(1) + 'ms';
+        const p99 = calculatePercentile(ep.latencies, 0.99).toFixed(1) + 'ms';
         const methodCls = 'method-' + ep.method;
 
         const tr = document.createElement('tr');
@@ -1223,8 +1356,12 @@ export class DashboardPanel {
           <td><span class="badge-method \${methodCls}">\${ep.method}</span></td>
           <td>\${ep.count}</td>
           <td>\${successRate}%</td>
+          <td>\${minLat}</td>
           <td>\${avgLat}</td>
+          <td>\${maxLat}</td>
+          <td>\${p90}</td>
           <td>\${p95}</td>
+          <td>\${p99}</td>
         \`;
         tbody.appendChild(tr);
       });
@@ -1275,11 +1412,26 @@ export class DashboardPanel {
       if (r.error_rate_percent !== undefined) {
         document.getElementById('valSuccessRate').innerText = (100 - r.error_rate_percent).toFixed(1) + '%';
       }
+      if (r.duration !== undefined) {
+        document.getElementById('valDuration').innerText = formatDuration(r.duration);
+      }
+      if (r.min_latency !== undefined) {
+        document.getElementById('valMin').innerText = formatLatency(r.min_latency);
+      }
       if (r.avg_latency !== undefined) {
         document.getElementById('valAvgLatency').innerText = formatLatency(r.avg_latency);
       }
+      if (r.max_latency !== undefined) {
+        document.getElementById('valMax').innerText = formatLatency(r.max_latency);
+      }
+      if (r.p90_latency !== undefined) {
+        document.getElementById('valP90').innerText = formatLatency(r.p90_latency);
+      }
       if (r.p95_latency !== undefined) {
         document.getElementById('valP95').innerText = formatLatency(r.p95_latency);
+      }
+      if (r.p99_latency !== undefined) {
+        document.getElementById('valP99').innerText = formatLatency(r.p99_latency);
       }
 
       // Endpoint breakdown from report scenarios
@@ -1293,8 +1445,12 @@ export class DashboardPanel {
                 method: req.method || 'GET',
                 count: req.count,
                 successRate: (req.success_rate !== undefined ? req.success_rate.toFixed(1) : ((req.success / Math.max(1, req.count)) * 100).toFixed(1)) + '%',
+                min: formatLatency(req.min_latency),
                 avg: formatLatency(req.avg_latency),
-                p95: formatLatency(req.p95_latency)
+                max: formatLatency(req.max_latency),
+                p90: formatLatency(req.p90_latency),
+                p95: formatLatency(req.p95_latency),
+                p99: formatLatency(req.p99_latency)
               });
             });
           }
@@ -1312,11 +1468,26 @@ export class DashboardPanel {
             <td><span class="badge-method \${methodCls}">\${item.method}</span></td>
             <td>\${item.count}</td>
             <td>\${item.successRate}</td>
+            <td>\${item.min}</td>
             <td>\${item.avg}</td>
+            <td>\${item.max}</td>
+            <td>\${item.p90}</td>
             <td>\${item.p95}</td>
+            <td>\${item.p99}</td>
           \`;
           tbody.appendChild(tr);
         });
+      }
+
+      // If report contains detailed samples and chart was empty, populate timeline
+      if (r.samples && r.samples.length > 0 && latencyHistory.length === 0) {
+        latencyHistory.length = 0;
+        r.samples.forEach(s => {
+          latencyHistory.push(s.latency / 1000000);
+        });
+        const chartCount = document.getElementById('chartPointsCount');
+        if (chartCount) chartCount.innerText = latencyHistory.length + ' requests';
+        renderNativeLatencyChart();
       }
 
       // If report contains detailed samples, populate inspector if empty
@@ -1608,10 +1779,6 @@ export class DashboardPanel {
         btnStop.innerText = '⏹ Stopping...';
       }
       vscode.postMessage({ command: 'stopTest' });
-    }
-
-    function analyzeWithAI() {
-      vscode.postMessage({ command: 'analyzeWithAI' });
     }
 
     // Modal Inspector Functions

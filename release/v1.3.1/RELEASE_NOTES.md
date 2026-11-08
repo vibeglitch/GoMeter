@@ -40,3 +40,4 @@ All precompiled binaries and the self-contained VSIX package are built with `CGO
 - `gometer-v1.3.1-windows-amd64.zip`
 - `gometer-v1.3.1-darwin-arm64.tar.gz`
 - `gometer-v1.3.1-darwin-amd64.tar.gz`
+

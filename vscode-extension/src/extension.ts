@@ -8,6 +8,7 @@ import { registerRunTestCommand } from './commands/runTest';
 import { registerGenerateTestCommand } from './commands/generateTest';
 import { registerAnalyzeResultsCommand } from './commands/analyzeResults';
 import { ExportCsvService } from './services/exportCsvService';
+import { SkillInstallerService } from './services/skillInstallerService';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -271,6 +272,16 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
       await csvExporter.exportFolder(folderPath);
+    })
+  );
+
+  // AI Coding Agent Skill Installer
+  const skillInstaller = new SkillInstallerService(context);
+  skillInstaller.autoInstall(true);
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gometer.installAgentSkill', async () => {
+      await skillInstaller.autoInstall(false);
     })
   );
 }

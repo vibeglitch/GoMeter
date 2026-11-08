@@ -14,7 +14,7 @@ import (
 func StartServer(ctx context.Context, transport string, port string) error {
 	server := mcp.NewServer(&mcp.Implementation{
 		Name:    "gometer",
-		Version: "1.5.1",
+		Version: "1.6.0",
 	}, nil)
 
 	// Register tools, resources, and prompts

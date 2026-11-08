@@ -45,3 +45,4 @@
 | `gometer-v1.5.1-windows-amd64.zip` | `edfba1098522c9ff5bbc4cb0ee02379b6bf8a28db6c7e482eef1b377e75a2c0c` |
 | `gometer-v1.5.1-darwin-arm64.tar.gz` | `6c49bace3508553bf39cfbadbe203301affa01a97d2f0118d97e1ecd73f90094` |
 | `gometer-v1.5.1-darwin-amd64.tar.gz` | `d8ca3906b9311934b1e9351c99beaf44310adfb49de6b119ebda91407d2b72e8` |
+

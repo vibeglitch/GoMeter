@@ -85,7 +85,7 @@ jobs:
       - name: Publish to VS Code Marketplace (Trusted Publishing)
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
-          npx @vscode/vsce publish --packagePath dist/gometer-${VERSION}.vsix
+          npx @vscode/vsce publish --oidc --packagePath dist/gometer-${VERSION}.vsix
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

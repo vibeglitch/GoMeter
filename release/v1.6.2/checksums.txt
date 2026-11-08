@@ -1,5 +1,5 @@
-c93b64368998b6a8fecf870772d28f0438c3e881fcae9567a33a2f490293e074  gometer-runner-1.6.2.vsix
-0dca7dac75ab0700a34fd4d424eadd122f9f4af6909bc07f96faf948827f89e4  gometer-v1.6.2-darwin-amd64.tar.gz
-9c5389a73ee02e380d8829cab06bbf5c5a873ae31f9652d6668410091b63de34  gometer-v1.6.2-darwin-arm64.tar.gz
-ea8f8909ceeef3465611495c867dc485eadc618085919a7a2745af9c42075398  gometer-v1.6.2-linux-amd64.tar.gz
-49c65e66c37c1936e1b8f0cf99100fef49b4ec1c1302cfd0cbe23d10208b1e13  gometer-v1.6.2-windows-amd64.zip
+750f73ef3cbfa5249c1058b7095bdb881e39312f96ccf37194a837b658ae3bef  gometer-runner-1.6.2.vsix
+fd58bc2fdd1f860a3c3357fe3558661a3a116f7870cf9c1c9dd025612a0db3ca  gometer-v1.6.2-darwin-amd64.tar.gz
+e3623a00689dcbc61615df172df75fe86cae9a4fc16f1ec360b8b4b007f4eff9  gometer-v1.6.2-darwin-arm64.tar.gz
+66e65f737a13926f5163c1e8fda901e12165bb7dd99e49cef239a8252a7a4af8  gometer-v1.6.2-linux-amd64.tar.gz
+3e3f4533f872426b54b78a1cc29fc6d28c4640ee4c33845013560f400a5f4cea  gometer-v1.6.2-windows-amd64.zip

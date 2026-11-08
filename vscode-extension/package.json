@@ -1,6 +1,6 @@
 {
   "name": "gometer-runner",
-  "displayName": "GoMeter - High Performance API Testing & Load Testing",
+  "displayName": "GoMeter Load Tester & API Performance Engine",
   "description": "Go-powered JMeter alternative for API testing, load testing, real-time metrics, LLM generation, and MCP support.",
   "version": "1.6.2",
   "publisher": "vibeglitch-sdlc",

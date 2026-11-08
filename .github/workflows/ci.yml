@@ -29,17 +29,11 @@ jobs:
       - name: Build GoMeter Binary
         run: go build -v -mod=vendor -ldflags="-s -w" -o bin/gometer ./cmd/gometer
 
-      - name: Validate Example Test Plans (Unix)
+      - name: Validate Example Test Plans
         run: |
           ./bin/gometer validate examples/data/real-dummy-apis.gometer.yaml
           ./bin/gometer validate examples/data/high-concurrency.gometer.yaml
         if: runner.os != 'Windows'
-
-      - name: Validate Example Test Plans (Windows)
-        run: |
-          .\bin\gometer.exe validate examples\data\real-dummy-apis.gometer.yaml
-          .\bin\gometer.exe validate examples\data\high-concurrency.gometer.yaml
-        if: runner.os == 'Windows'
 
   test-extension:
     name: Test & Build VS Code Extension

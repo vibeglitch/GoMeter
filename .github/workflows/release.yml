@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build-release:
@@ -11,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,7 +33,13 @@ jobs:
 
       - name: Extract Version
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          if [ -n "${GITHUB_REF_NAME}" ] && [[ "${GITHUB_REF_NAME}" == v* ]]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(node -p "require('./vscode-extension/package.json').version")
+            echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build Cross-Platform Binaries
         run: |
@@ -42,20 +50,24 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -X main.version=${VERSION}" -o bin/gometer ./cmd/gometer
           tar -czf dist/gometer-v${VERSION}-linux-amd64.tar.gz -C bin gometer
           cp bin/gometer vscode-extension/bin/gometer
-          chmod +x vscode-extension/bin/gometer
+          cp bin/gometer vscode-extension/bin/gometer-linux-amd64
+          chmod +x vscode-extension/bin/gometer vscode-extension/bin/gometer-linux-amd64
 
           # Windows amd64
           CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w -X main.version=${VERSION}" -o bin/gometer.exe ./cmd/gometer
           zip -j dist/gometer-v${VERSION}-windows-amd64.zip bin/gometer.exe
           cp bin/gometer.exe vscode-extension/bin/gometer.exe
+          cp bin/gometer.exe vscode-extension/bin/gometer-windows-amd64.exe
 
           # Darwin amd64
           CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X main.version=${VERSION}" -o bin/gometer-darwin-amd64 ./cmd/gometer
           tar -czf dist/gometer-v${VERSION}-darwin-amd64.tar.gz -C bin --transform='s/gometer-darwin-amd64/gometer/' gometer-darwin-amd64
+          cp bin/gometer-darwin-amd64 vscode-extension/bin/gometer-darwin-amd64
 
           # Darwin arm64
           CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X main.version=${VERSION}" -o bin/gometer-darwin-arm64 ./cmd/gometer
           tar -czf dist/gometer-v${VERSION}-darwin-arm64.tar.gz -C bin --transform='s/gometer-darwin-arm64/gometer/' gometer-darwin-arm64
+          cp bin/gometer-darwin-arm64 vscode-extension/bin/gometer-darwin-arm64
 
       - name: Package VSIX
         run: |
@@ -70,8 +82,14 @@ jobs:
           sha256sum * > checksums.txt
           cat checksums.txt
 
+      - name: Publish to VS Code Marketplace (Trusted Publishing)
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          npx @vscode/vsce publish --packagePath dist/gometer-${VERSION}.vsix
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
           files: |
             dist/*

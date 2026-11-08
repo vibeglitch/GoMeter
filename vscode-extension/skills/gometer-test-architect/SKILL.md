@@ -258,3 +258,4 @@ scenarios:
    gometer run tests/auth-flow.gometer.yaml --output all
    ```
 4. View live metrics in the VS Code GoMeter Dashboard or export results as CSV directly from the Test Plans tree view.
+

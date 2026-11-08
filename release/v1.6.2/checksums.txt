@@ -1,3 +1,5 @@
+7c8f84b34a8932a61e9c883a800b96e4f28f9123ac8317fb514b6e8075c38a1c  RELEASE_NOTES.md
+f13681d8ecc3e3211f4b4b897f13b9317ab59b09fdda26110d849fc9946d037c  checksums.txt
 750f73ef3cbfa5249c1058b7095bdb881e39312f96ccf37194a837b658ae3bef  gometer-runner-1.6.2.vsix
 fd58bc2fdd1f860a3c3357fe3558661a3a116f7870cf9c1c9dd025612a0db3ca  gometer-v1.6.2-darwin-amd64.tar.gz
 e3623a00689dcbc61615df172df75fe86cae9a4fc16f1ec360b8b4b007f4eff9  gometer-v1.6.2-darwin-arm64.tar.gz

@@ -82,3 +82,6 @@ When preparing a release, follow the guidelines in [VERSIONING.md](VERSIONING.md
    git commit -m "feat(runner): add adaptive pacing based on server response"
    ```
 4. Push to your fork and submit a Pull Request targeting `main`.
+
+> [!IMPORTANT]
+> The `main` branch is protected by repository rulesets. Direct pushes are disabled, CI status checks are required, and all Pull Requests must be reviewed and accepted by `@vibeglitch`.

@@ -1,0 +1,65 @@
+name: "🐛 Bug Report"
+description: "File a bug report to help us improve GoMeter"
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: input
+    id: version
+    attributes:
+      label: GoMeter Version
+      description: Run `gometer --version` or check the VS Code extension version.
+      placeholder: "e.g., 1.6.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      options:
+        - "CLI Engine"
+        - "VS Code Extension"
+        - "MCP Server"
+        - "Dashboard / Webview"
+        - "CSV / Parameterization"
+        - "Reporter (HTML / JSON)"
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - "Linux (Ubuntu / Debian / Arch / Fedora)"
+        - "macOS Apple Silicon (M1 / M2 / M3 / M4)"
+        - "macOS Intel"
+        - "Windows 10 / 11"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Steps or commands to reproduce the behavior.
+      placeholder: |
+        1. Run 'gometer run my-test.yaml'
+        2. Set virtual users to 50
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs or Terminal Output
+      description: Please copy and paste any relevant log output.
+      render: shell

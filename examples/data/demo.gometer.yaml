@@ -1,0 +1,42 @@
+name: "E-Commerce API Live Load Test"
+description: "Simulating concurrent shoppers browsing catalog and viewing items (Runs for 30s to observe real-time metrics and test manual stop)"
+base_url: "https://jsonplaceholder.typicode.com"
+defaults:
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+    User-Agent: "GoMeter/1.3.1"
+  timeout: 10s
+scenarios:
+  - name: "Shopping Flow"
+    virtual_users: 5
+    duration: 30s
+    ramp_up: 1s
+    think_time: 250ms
+    requests:
+      - name: "Browse Catalog"
+        method: GET
+        path: "/posts"
+        assertions:
+          - type: status
+            expected: "200"
+          - type: latency
+            expected: "<2000ms"
+      - name: "View Item Details"
+        method: GET
+        path: "/posts/1"
+        assertions:
+          - type: status
+            expected: "200"
+          - type: body_json
+            path: "$.id"
+            expected: "1"
+    thresholds:
+      - metric: p95_latency
+        operator: "<"
+        value: 2000
+        unit: ms
+      - metric: error_rate
+        operator: "<"
+        value: 5
+        unit: "%"

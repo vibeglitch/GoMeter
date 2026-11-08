@@ -239,21 +239,34 @@ export class GoMeterBridge {
    * Stop active running test
    */
   public stopActiveTest(): boolean {
-      if (this.activeProcess && this.isRunning) {
-        this.wasStopped = true;
+    if (this.activeProcess && this.isRunning) {
+      this.wasStopped = true;
+      const proc = this.activeProcess;
+      try {
+        proc.kill('SIGINT');
+      } catch {
         try {
-          this.activeProcess.kill('SIGTERM');
+          proc.kill('SIGTERM');
         } catch {
+          // Already terminated
+        }
+      }
+
+      // Hard-kill fallback if still running after 1.5s
+      setTimeout(() => {
+        if (this.activeProcess === proc && this.isRunning) {
           try {
-            this.activeProcess.kill('SIGKILL');
+            proc.kill('SIGKILL');
           } catch {
-            // Process already terminated
+            // Process terminated
           }
         }
-        return true;
-      }
-      return false;
+      }, 1500);
+
+      return true;
     }
+    return false;
+  }
 
   /**
    * Retrieves historical test runs from reports/history/index.json or reports/latest.json

@@ -40,11 +40,17 @@ func LoadFromFile(filePath string) (*TestPlan, error) {
 		return nil, fmt.Errorf("invalid YAML syntax in %s: %w", filePath, err)
 	}
 
-	// Resolve relative CSV files relative to test plan directory
+	// Resolve relative CSV files and body files relative to test plan directory with resilient fallbacks
 	baseDir := filepath.Dir(filePath)
 	for i := range plan.Variables.CSV {
-		if !filepath.IsAbs(plan.Variables.CSV[i].File) {
-			plan.Variables.CSV[i].File = filepath.Join(baseDir, plan.Variables.CSV[i].File)
+		plan.Variables.CSV[i].File = resolveFilePath(baseDir, plan.Variables.CSV[i].File)
+	}
+
+	for i := range plan.Scenarios {
+		for j := range plan.Scenarios[i].Requests {
+			if plan.Scenarios[i].Requests[j].BodyFile != "" {
+				plan.Scenarios[i].Requests[j].BodyFile = resolveFilePath(baseDir, plan.Scenarios[i].Requests[j].BodyFile)
+			}
 		}
 	}
 
@@ -113,4 +119,44 @@ func Validate(plan *TestPlan) []string {
 
 	return errs
 }
+
+// resolveFilePath resolves a file path against multiple fallback candidates
+// to ensure test plans work even when moved into nested folders or run from different working directories.
+func resolveFilePath(baseDir, raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if filepath.IsAbs(raw) {
+		if fi, err := os.Stat(raw); err == nil && !fi.IsDir() {
+			return raw
+		}
+	}
+
+	cleanRaw := filepath.Clean(raw)
+	baseName := filepath.Base(raw)
+	parentDir := filepath.Dir(baseDir)
+	grandParentDir := filepath.Dir(parentDir)
+
+	candidates := []string{
+		filepath.Join(baseDir, raw),                     // 1. Direct relative to plan dir (e.g. baseDir/data/users.csv)
+		cleanRaw,                                         // 2. Relative to current working directory (e.g. ./data/users.csv)
+		filepath.Join(baseDir, baseName),                // 3. Direct file in plan directory (e.g. baseDir/users.csv)
+		filepath.Join(parentDir, raw),                   // 4. Relative to parent dir (e.g. examples/ + data/users.csv)
+		filepath.Join(parentDir, "data", baseName),       // 5. Parent's data dir (e.g. examples/data/users.csv)
+		filepath.Join(grandParentDir, raw),              // 6. Relative to grandparent dir
+		filepath.Join(grandParentDir, "data", baseName), // 7. Grandparent's data dir
+		filepath.Join("examples", "data", baseName),     // 8. Workspace examples/data
+		filepath.Join("data", baseName),                 // 9. Workspace data/
+	}
+
+	for _, cand := range candidates {
+		if fi, err := os.Stat(cand); err == nil && !fi.IsDir() {
+			return cand
+		}
+	}
+
+	// Default fallback to plan-relative path
+	return filepath.Join(baseDir, raw)
+}
+
 

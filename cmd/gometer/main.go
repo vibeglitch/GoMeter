@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	version   = "1.3.0"
+	version   = "1.3.1"
 	outputFmt string
 	reportDir string
 	verbose   bool
@@ -259,6 +259,18 @@ func executeRun(cmd *cobra.Command, args []string) error {
 
 	default: // "console"
 		reporter.PrintConsoleReport(os.Stdout, report)
+	}
+
+	if ctx.Err() != nil {
+		if verbose && outputFmt == "json" {
+			stoppedMsg := map[string]interface{}{
+				"type":   "stopped",
+				"report": report,
+			}
+			data, _ := json.Marshal(stoppedMsg)
+			fmt.Println(string(data))
+		}
+		return nil
 	}
 
 	if !report.Passed {

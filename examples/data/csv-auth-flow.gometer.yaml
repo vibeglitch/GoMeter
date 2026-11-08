@@ -20,7 +20,7 @@ defaults:
 scenarios:
   - name: "User Login and Token Verification"
     virtual_users: 6
-    duration: 10s
+    duration: 25s
     ramp_up: 2s
     think_time: 200ms
     requests:

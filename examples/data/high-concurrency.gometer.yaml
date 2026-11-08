@@ -17,9 +17,9 @@ defaults:
 scenarios:
   - name: "Customer Checkout Journey"
     virtual_users: 50
-    duration: 5s
+    duration: 20s
     ramp_up: 1s
-    think_time: 10ms
+    think_time: 100ms
     requests:
       - name: "1. Login User"
         method: POST

@@ -71,3 +71,56 @@ scenarios:
 	}
 }
 
+func TestLoadFromFile_ResilientCSVResolution(t *testing.T) {
+	// Create a nested directory structure: root/subfolder/test.yaml
+	// and put CSV in root/data/users.csv, but test.yaml references "./data/users.csv"
+	tmpDir := t.TempDir()
+	subDir := filepath.Join(tmpDir, "subfolder")
+	dataDir := filepath.Join(tmpDir, "data")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	csvPath := filepath.Join(dataDir, "users.csv")
+	if err := os.WriteFile(csvPath, []byte("username,password\nalice,secret\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	yamlContent := `name: "CSV Subfolder Test"
+base_url: "https://httpbin.org"
+variables:
+  csv:
+    - name: "users"
+      file: "./data/users.csv"
+scenarios:
+  - name: "S1"
+    virtual_users: 1
+    duration: 1s
+    requests:
+      - name: "Req1"
+        method: "GET"
+        path: "/users"
+`
+	yamlPath := filepath.Join(subDir, "test.yaml")
+	if err := os.WriteFile(yamlPath, []byte(yamlContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := LoadFromFile(yamlPath)
+	if err != nil {
+		t.Fatalf("LoadFromFile failed: %v", err)
+	}
+
+	if len(loaded.Variables.CSV) == 0 {
+		t.Fatalf("expected CSV variable loaded")
+	}
+
+	resolved := loaded.Variables.CSV[0].File
+	if resolved != csvPath {
+		t.Errorf("expected CSV to resolve to %s, got %s", csvPath, resolved)
+	}
+}
+
+

@@ -1096,6 +1096,8 @@ export class DashboardPanel {
         badge.style.background = 'rgba(56, 189, 248, 0.2)';
         badge.style.color = '#38bdf8';
         btnStop.style.display = 'inline-flex';
+        btnStop.disabled = false;
+        btnStop.innerText = '⏹ Stop Test';
       } else if (status === 'STOPPED') {
         badge.style.background = 'rgba(245, 158, 11, 0.2)';
         badge.style.color = '#f59e0b';
@@ -1600,6 +1602,11 @@ export class DashboardPanel {
     }
 
     function stopTest() {
+      const btnStop = document.getElementById('btnStop');
+      if (btnStop) {
+        btnStop.disabled = true;
+        btnStop.innerText = '⏹ Stopping...';
+      }
       vscode.postMessage({ command: 'stopTest' });
     }
 

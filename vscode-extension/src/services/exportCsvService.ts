@@ -83,7 +83,7 @@ export class ExportCsvService {
       const planFiles = findAllTestPlans(folderPath);
       if (planFiles.length === 0) {
         vscode.window.showWarningMessage(
-          `No GoMeter test plan files (.gometer.yaml, .yaml) found in '${path.basename(folderPath)}'.`
+          `No test plan files (.tensilix.yaml, .gometer.yaml, .yaml) found in '${path.basename(folderPath)}'.`
         );
         return;
       }

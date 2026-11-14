@@ -48,13 +48,13 @@ export async function registerRunTestCommand(
     vscode.commands.registerCommand('gometer.stopActiveTest', () => {
       const stopped = bridge.stopActiveTest();
       if (stopped) {
-        vscode.window.showInformationMessage('GoMeter test run stopped.');
-        statusBarItem.text = '$(circle-slash) GoMeter: Stopped';
+        vscode.window.showInformationMessage('Tensilix test run stopped.');
+        statusBarItem.text = '$(circle-slash) Tensilix: Stopped';
         if (DashboardPanel.currentPanel) {
           DashboardPanel.currentPanel.sendStatus('STOPPED');
         }
       } else {
-        vscode.window.showInformationMessage('No active GoMeter test is currently running (test has already completed).');
+        vscode.window.showInformationMessage('No active Tensilix test is currently running (test has already completed).');
       }
     })
   );
@@ -69,13 +69,13 @@ async function executeTest(
   lastExecutedFilePath = filePath;
   const panel = DashboardPanel.createOrShow(context.extensionUri, bridge);
   panel.sendStatus('RUNNING');
-  statusBarItem.text = '$(sync~spin) GoMeter: Running...';
+  statusBarItem.text = '$(sync~spin) Tensilix: Running...';
   statusBarItem.show();
 
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `GoMeter: Running ${path.basename(filePath)}`,
+      title: `Tensilix: Running ${path.basename(filePath)}`,
       cancellable: true,
     },
     async (progress, token) => {
@@ -101,17 +101,17 @@ async function executeTest(
 
         if (res.stopped) {
           panel.sendStatus('STOPPED');
-          statusBarItem.text = '$(circle-slash) GoMeter: Stopped';
-          vscode.window.showInformationMessage('GoMeter test run was stopped by user.');
+          statusBarItem.text = '$(circle-slash) Tensilix: Stopped';
+          vscode.window.showInformationMessage('Tensilix test run was stopped by user.');
         } else if (res.success) {
           panel.sendStatus('PASSED');
-          statusBarItem.text = '$(check) GoMeter: Passed';
+          statusBarItem.text = '$(check) Tensilix: Passed';
           vscode.window.showInformationMessage(
-            `GoMeter test passed! Total: ${res.report?.total_requests || 0} reqs @ ${res.report?.requests_per_second || 0} RPS`
+            `Tensilix test passed! Total: ${res.report?.total_requests || 0} reqs @ ${res.report?.requests_per_second || 0} RPS`
           );
         } else {
           panel.sendStatus('FAILED');
-          statusBarItem.text = '$(error) GoMeter: Failed';
+          statusBarItem.text = '$(error) Tensilix: Failed';
 
           let detail = res.error;
           if (res.report && Array.isArray(res.report.thresholds)) {
@@ -124,7 +124,7 @@ async function executeTest(
           }
 
           const msg = detail || (res.report && !res.report.passed ? 'SLA thresholds breached' : 'Execution error');
-          vscode.window.showErrorMessage(`GoMeter test failed: ${msg}`);
+          vscode.window.showErrorMessage(`Tensilix test failed: ${msg}`);
         }
       }
   );

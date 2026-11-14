@@ -44,22 +44,26 @@ export class GoMeterBridge {
    */
   public resolveBinaryPath(): string {
     // 1. User configured custom path
-    const configPath = vscode.workspace
-      .getConfiguration('gometer')
-      .get<string>('binaryPath', '');
+    const configPath =
+      vscode.workspace.getConfiguration('tensilix').get<string>('binaryPath', '') ||
+      vscode.workspace.getConfiguration('gometer').get<string>('binaryPath', '');
 
     if (configPath && fs.existsSync(configPath)) {
       return configPath;
     }
 
-    // 2. Check workspace root bin/gometer (useful when developing GoMeter or using project-local binary)
+    // 2. Check workspace root bin/tensilix or bin/gometer (useful when developing or using project-local binary)
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders && workspaceFolders.length > 0) {
       const rootPath = workspaceFolders[0].uri.fsPath;
-      const binName = process.platform === 'win32' ? 'gometer.exe' : 'gometer';
-      const localBin = path.join(rootPath, 'bin', binName);
-      if (fs.existsSync(localBin)) {
-        return localBin;
+      const binNames = process.platform === 'win32'
+        ? ['tensilix.exe', 'gometer.exe']
+        : ['tensilix', 'gometer'];
+      for (const binName of binNames) {
+        const localBin = path.join(rootPath, 'bin', binName);
+        if (fs.existsSync(localBin)) {
+          return localBin;
+        }
       }
     }
 
@@ -70,23 +74,52 @@ export class GoMeterBridge {
       let candidateNames: string[] = [];
 
       if (platform === 'win32') {
-        candidateNames = ['gometer.exe', 'gometer-windows-amd64.exe'];
+        candidateNames = [
+          'tensilix.exe',
+          'tensilix-windows-amd64.exe',
+          'gometer.exe',
+          'gometer-windows-amd64.exe',
+        ];
       } else if (platform === 'darwin') {
         if (arch === 'arm64') {
           // macOS Apple Silicon (M1/M2/M3/M4) with Intel Rosetta fallback
-          candidateNames = ['gometer-darwin-arm64', 'gometer-darwin-amd64', 'gometer'];
+          candidateNames = [
+            'tensilix-darwin-arm64',
+            'tensilix-darwin-amd64',
+            'tensilix',
+            'gometer-darwin-arm64',
+            'gometer-darwin-amd64',
+            'gometer',
+          ];
         } else {
           // macOS Intel
-          candidateNames = ['gometer-darwin-amd64', 'gometer'];
+          candidateNames = [
+            'tensilix-darwin-amd64',
+            'tensilix',
+            'gometer-darwin-amd64',
+            'gometer',
+          ];
         }
       } else if (platform === 'linux') {
         if (arch === 'arm64') {
-          candidateNames = ['gometer-linux-arm64', 'gometer-linux-amd64', 'gometer'];
+          candidateNames = [
+            'tensilix-linux-arm64',
+            'tensilix-linux-amd64',
+            'tensilix',
+            'gometer-linux-arm64',
+            'gometer-linux-amd64',
+            'gometer',
+          ];
         } else {
-          candidateNames = ['gometer-linux-amd64', 'gometer'];
+          candidateNames = [
+            'tensilix-linux-amd64',
+            'tensilix',
+            'gometer-linux-amd64',
+            'gometer',
+          ];
         }
       } else {
-        candidateNames = ['gometer'];
+        candidateNames = ['tensilix', 'gometer'];
       }
 
       for (const candidate of candidateNames) {
@@ -106,7 +139,7 @@ export class GoMeterBridge {
     }
 
     // 4. Fallback to system PATH
-    return 'gometer';
+    return 'tensilix';
   }
 
   /**

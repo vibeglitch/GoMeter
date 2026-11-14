@@ -17,9 +17,9 @@ export class GoMeterCodeLensProvider implements vscode.CodeLensProvider {
     const firstLineRange = new vscode.Range(0, 0, 0, 0);
 
     const runCommand: vscode.Command = {
-      title: '$(play) Run GoMeter Test',
+      title: '$(play) Run Tensilix Test',
       command: 'gometer.runActiveTest',
-      tooltip: 'Execute this GoMeter test plan in the live dashboard',
+      tooltip: 'Execute this Tensilix test plan in the live dashboard',
     };
     lenses.push(new vscode.CodeLens(firstLineRange, runCommand));
 
@@ -33,7 +33,7 @@ export class GoMeterCodeLensProvider implements vscode.CodeLensProvider {
     const dashboardCommand: vscode.Command = {
       title: '$(graph-line) Open Dashboard',
       command: 'gometer.openDashboard',
-      tooltip: 'Open GoMeter Live Dashboard panel',
+      tooltip: 'Open Tensilix Live Dashboard panel',
     };
     lenses.push(new vscode.CodeLens(firstLineRange, dashboardCommand));
 

@@ -25,7 +25,7 @@ export function isGoMeterTestFile(filePath: string): boolean {
     if (ext !== '.yaml' && ext !== '.yml') return false;
 
     const base = path.basename(filePath).toLowerCase();
-    if (base.includes('.gometer.')) return true;
+    if (base.includes('.tensilix.') || base.includes('.gometer.')) return true;
 
     const content = fs.readFileSync(filePath, 'utf8');
     return content.includes('scenarios') && (content.includes('base_url') || content.includes('defaults'));

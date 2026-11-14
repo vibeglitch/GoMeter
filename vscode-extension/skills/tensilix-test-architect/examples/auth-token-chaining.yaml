@@ -1,0 +1,51 @@
+name: "Authentication Token Chaining Example"
+description: "Sequences login, JWT extraction, authenticated profile fetch, and token verification"
+version: "1.0.0"
+base_url: "https://httpbin.org"
+
+defaults:
+  headers:
+    Content-Type: "application/json"
+    Accept: "application/json"
+  timeout: 10s
+
+scenarios:
+  - name: "Login & Token Protected API Journey"
+    virtual_users: 5
+    duration: 20s
+    ramp_up: 2s
+    think_time: 150ms
+    requests:
+      - name: "User Login"
+        method: POST
+        path: "/post"
+        body: '{"username": "admin@example.com", "password": "SuperSecretPassword123!"}'
+        assertions:
+          - type: status
+            expected: "200"
+          - type: latency
+            expected: "<1500ms"
+        extract:
+          - name: simulated_token
+            source: body_json
+            path: "$.origin"
+
+      - name: "Access Secured Endpoint"
+        method: GET
+        path: "/bearer"
+        headers:
+          Authorization: "Bearer ${simulated_token}"
+        assertions:
+          - type: status
+            expected: "200"
+
+    thresholds:
+      - metric: p95_latency
+        operator: "<"
+        value: 1200
+        unit: ms
+      - metric: error_rate
+        operator: "<"
+        value: 1.0
+        unit: "%"
+

@@ -74,7 +74,7 @@ jobs:
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           cd vscode-extension
           npm run build
-          npx @vscode/vsce package --no-dependencies -o ../dist/gometer-runner-${VERSION}.vsix
+          npx @vscode/vsce package --no-dependencies -o ../dist/tensilix-${VERSION}.vsix
 
       - name: Generate Checksums
         run: |
@@ -85,7 +85,7 @@ jobs:
       - name: Publish to VS Code Marketplace (Trusted Publishing)
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
-          npx --yes @vscode/vsce@latest publish --oidc --packagePath dist/gometer-runner-${VERSION}.vsix
+          npx --yes @vscode/vsce@latest publish --oidc --packagePath dist/tensilix-${VERSION}.vsix
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

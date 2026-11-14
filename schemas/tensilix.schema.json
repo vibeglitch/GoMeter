@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GoMeter Test Plan",
+  "description": "Schema definition for GoMeter API and load testing YAML files",
+  "type": "object",
+  "required": ["name", "base_url", "scenarios"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Unique descriptive name of the test plan"
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional detailed overview of the test suite"
+    },
+    "base_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Target server URL e.g. https://api.myservice.com"
+    },
+    "variables": {
+      "type": "object",
+      "description": "Variable definitions and data feeds",
+      "properties": {
+        "inline": {
+          "type": "object",
+          "description": "Key-value map of static or default variables",
+          "additionalProperties": { "type": "string" }
+        },
+        "csv": {
+          "type": "array",
+          "description": "CSV data file configurations for parameterization",
+          "items": {
+            "type": "object",
+            "required": ["name", "file"],
+            "properties": {
+              "name": { "type": "string", "description": "Identifier for the CSV source" },
+              "file": { "type": "string", "description": "Relative or absolute path to the CSV file" },
+              "delimiter": { "type": "string", "description": "Column delimiter (default: ,)" }
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Default configuration applied to all requests",
+      "properties": {
+        "headers": {
+          "type": "object",
+          "description": "Default HTTP headers",
+          "additionalProperties": { "type": "string" }
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Default request timeout (e.g. 10s, 30s)"
+        },
+        "auth": {
+          "type": "object",
+          "description": "Default authentication",
+          "required": ["type"],
+          "properties": {
+            "type": { "type": "string", "enum": ["bearer", "basic", "api_key"] },
+            "token": { "type": "string" },
+            "username": { "type": "string" },
+            "password": { "type": "string" },
+            "header": { "type": "string" },
+            "value": { "type": "string" }
+          }
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "description": "List of concurrent load testing scenarios",
+      "items": {
+        "type": "object",
+        "required": ["name", "virtual_users", "requests"],
+        "properties": {
+          "name": { "type": "string", "description": "Scenario name" },
+          "virtual_users": { "type": "integer", "minimum": 1, "description": "Number of concurrent goroutine workers" },
+          "duration": { "type": "string", "description": "Scenario duration e.g. 30s, 2m, 1h" },
+          "ramp_up": { "type": "string", "description": "Ramp-up period to stagger user spin-up e.g. 5s" },
+          "iterations": { "type": "integer", "minimum": 0, "description": "Fixed number of iterations per user" },
+          "think_time": { "type": "string", "description": "Delay between requests e.g. 250ms, 1s" },
+          "requests": {
+            "type": "array",
+            "description": "Ordered sequence of HTTP requests executed by each virtual user",
+            "items": {
+              "type": "object",
+              "required": ["name", "method", "path"],
+              "properties": {
+                "name": { "type": "string", "description": "Request name" },
+                "method": { "type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"] },
+                "path": { "type": "string", "description": "Endpoint path e.g. /users or /v1/orders" },
+                "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+                "body": { "type": "string", "description": "Raw payload string" },
+                "body_file": { "type": "string", "description": "Path to request payload file" },
+                "query_params": { "type": "object", "additionalProperties": { "type": "string" } },
+                "assertions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["type", "expected"],
+                    "properties": {
+                      "type": { "type": "string", "enum": ["status", "latency", "body_contains", "body_json", "header"] },
+                      "expected": { "type": "string" },
+                      "path": { "type": "string" }
+                    }
+                  }
+                },
+                "extract": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["name", "source", "path"],
+                    "properties": {
+                      "name": { "type": "string" },
+                      "source": { "type": "string", "enum": ["body_json", "header", "body_regex"] },
+                      "path": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "thresholds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["metric", "operator", "value"],
+              "properties": {
+                "metric": { "type": "string", "enum": ["p95_latency", "p99_latency", "avg_latency", "error_rate", "rps"] },
+                "operator": { "type": "string", "enum": ["<", "<=", ">", ">="] },
+                "value": { "type": "number" },
+                "unit": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

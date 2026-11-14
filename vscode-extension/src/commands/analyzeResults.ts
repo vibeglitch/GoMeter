@@ -27,7 +27,7 @@ export function registerAnalyzeResultsCommand(
           canSelectFiles: true,
           canSelectMany: false,
           filters: { 'JSON Reports': ['json'] },
-          openLabel: 'Select GoMeter Report',
+          openLabel: 'Select Tensilix Report',
         });
         if (!files || files.length === 0) {
           return;
@@ -38,7 +38,7 @@ export function registerAnalyzeResultsCommand(
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'GoMeter: Diagnosing performance results with AI...',
+          title: 'Tensilix: Diagnosing performance results with AI...',
           cancellable: true,
         },
         async (progress, token) => {
@@ -48,7 +48,7 @@ export function registerAnalyzeResultsCommand(
             // Open analysis in a markdown document beside current editor
             const doc = await vscode.workspace.openTextDocument({
               language: 'markdown',
-              content: `# GoMeter AI Performance Diagnosis\n\n${analysisMarkdown}`,
+              content: `# Tensilix AI Performance Diagnosis\n\n${analysisMarkdown}`,
             });
 
             await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.Beside });

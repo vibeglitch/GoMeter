@@ -1,17 +1,17 @@
 <div align="center">
 
-# ⚡ GoMeter
+# ⚡ Tensilix
 
 **The Modern, High-Performance API Testing & Load Runner Alternative to Apache JMeter**
 
 *Engineered in Go for extreme concurrency, native Model Context Protocol (MCP) integration, and a self-contained, cross-platform VS Code extension.*
 
-[![CI](https://github.com/vibeglitch/GoMeter/actions/workflows/ci.yml/badge.svg)](https://github.com/vibeglitch/GoMeter/actions/workflows/ci.yml)
+[![CI](https://github.com/vibeglitch/Tensilix/actions/workflows/ci.yml/badge.svg)](https://github.com/vibeglitch/Tensilix/actions/workflows/ci.yml)
 [![Go Version](https://img.shields.io/badge/Go-1.25-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
 [![Version](https://img.shields.io/badge/Version-1.6.2-blue?style=for-the-badge)](VERSIONING.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/MCP-Official%20Go%20SDK-purple?style=for-the-badge)](https://modelcontextprotocol.io)
-[![VS Code Extension](https://img.shields.io/badge/VS%20Code-VSIX%20v1.6.2-007ACC?style=for-the-badge&logo=visual-studio-code)](release/v1.6.2/)
+[![VS Code Extension](https://img.shields.io/badge/VS%20Code-Tensilix%20v1.6.2-007ACC?style=for-the-badge&logo=visual-studio-code)](vscode-extension/)
 
 ---
 

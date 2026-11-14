@@ -126,7 +126,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       const fileName = await vscode.window.showInputBox({
         prompt: 'Enter test plan file name',
-        value: 'new-test.gometer.yaml',
+        value: 'new-test.tensilix.yaml',
         validateInput: (val) =>
           !val || (!val.endsWith('.yaml') && !val.endsWith('.yml'))
             ? 'Filename must end with .yaml or .yml'
@@ -143,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
         treeProvider.refresh();
         const doc = await vscode.workspace.openTextDocument(filePath);
         await vscode.window.showTextDocument(doc);
-        vscode.window.showInformationMessage(`Created GoMeter test plan: ${fileName}`);
+        vscode.window.showInformationMessage(`Created Tensilix test plan: ${fileName}`);
       } else {
         vscode.window.showErrorMessage('Failed to create test plan.');
       }
@@ -216,10 +216,10 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const defaultPath = path.join(workspaceFolders[0].uri.fsPath, 'load-test.gometer.yaml');
+      const defaultPath = path.join(workspaceFolders[0].uri.fsPath, 'load-test.tensilix.yaml');
       const targetUri = await vscode.window.showSaveDialog({
         defaultUri: vscode.Uri.file(defaultPath),
-        filters: { 'GoMeter YAML': ['yaml', 'yml'] },
+        filters: { 'Tensilix YAML': ['yaml', 'yml'], 'GoMeter YAML': ['yaml', 'yml'] },
       });
 
       if (!targetUri) {
@@ -231,7 +231,7 @@ export function activate(context: vscode.ExtensionContext) {
         treeProvider.refresh();
         const doc = await vscode.workspace.openTextDocument(targetUri);
         await vscode.window.showTextDocument(doc);
-        vscode.window.showInformationMessage(`Created GoMeter test plan: ${path.basename(targetUri.fsPath)}`);
+        vscode.window.showInformationMessage(`Created Tensilix test plan: ${path.basename(targetUri.fsPath)}`);
       } else {
         vscode.window.showErrorMessage('Failed to initialize test plan.');
       }

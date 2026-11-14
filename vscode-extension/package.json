@@ -1,12 +1,12 @@
 {
-  "name": "gometer-runner",
-  "displayName": "GoMeter Load Tester & API Performance Engine",
-  "description": "Go-powered JMeter alternative for API testing, load testing, real-time metrics, LLM generation, and MCP support.",
+  "name": "tensilix",
+  "displayName": "Tensilix - API Load Testing & Performance Engine",
+  "description": "High-performance API load tester, stress testing engine, and real-time performance telemetry. Zero-dependency Go core, multi-step session chaining, and MCP AI integration.",
   "version": "1.6.2",
   "publisher": "vibeglitch-sdlc",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vibeglitch/GoMeter"
+    "url": "https://github.com/vibeglitch/Tensilix"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -17,12 +17,15 @@
     "Other"
   ],
   "keywords": [
-    "gometer",
-    "jmeter",
-    "api-testing",
+    "tensilix",
     "load-testing",
+    "api-testing",
+    "stress-testing",
+    "performance",
+    "benchmarking",
     "mcp",
-    "performance"
+    "jmeter",
+    "k6"
   ],
   "icon": "resources/icon.png",
   "activationEvents": [
@@ -34,7 +37,7 @@
       "activitybar": [
         {
           "id": "gometer-sidebar",
-          "title": "GoMeter",
+          "title": "Tensilix",
           "icon": "resources/activitybar.svg"
         }
       ]
@@ -44,84 +47,84 @@
         {
           "id": "gometer.testPlansView",
           "name": "Test Plans",
-          "contextualTitle": "GoMeter Test Plans"
+          "contextualTitle": "Tensilix Test Plans"
         }
       ]
     },
     "commands": [
       {
         "command": "gometer.runActiveTest",
-        "title": "GoMeter: Run Current Test Plan",
+        "title": "Tensilix: Run Current Test Plan",
         "icon": "$(play)"
       },
       {
         "command": "gometer.runTestFile",
-        "title": "GoMeter: Run Test Plan",
+        "title": "Tensilix: Run Test Plan",
         "icon": "$(play)"
       },
       {
         "command": "gometer.openDashboard",
-        "title": "GoMeter: Open Live Dashboard",
+        "title": "Tensilix: Open Live Dashboard",
         "icon": "$(graph-line)"
       },
       {
         "command": "gometer.generateTestWithAI",
-        "title": "GoMeter: Generate Test Plan with AI",
+        "title": "Tensilix: Generate Test Plan with AI",
         "icon": "$(sparkle)"
       },
       {
         "command": "gometer.analyzeReportWithAI",
-        "title": "GoMeter: Analyze Test Results with AI",
+        "title": "Tensilix: Analyze Test Results with AI",
         "icon": "$(beaker)"
       },
       {
         "command": "gometer.validateTestPlan",
-        "title": "GoMeter: Validate Test Plan",
+        "title": "Tensilix: Validate Test Plan",
         "icon": "$(check)"
       },
       {
         "command": "gometer.initTestPlan",
-        "title": "GoMeter: Create Starter Test Plan",
+        "title": "Tensilix: Create Starter Test Plan",
         "icon": "$(new-file)"
       },
       {
         "command": "gometer.stopActiveTest",
-        "title": "GoMeter: Stop Running Test",
+        "title": "Tensilix: Stop Running Test",
         "icon": "$(debug-stop)"
       },
       {
         "command": "gometer.refreshTestPlans",
-        "title": "GoMeter: Refresh Test Plans",
+        "title": "Tensilix: Refresh Test Plans",
         "icon": "$(refresh)"
       },
       {
         "command": "gometer.newFolder",
-        "title": "GoMeter: New Folder...",
+        "title": "Tensilix: New Folder...",
         "icon": "$(new-folder)"
       },
       {
         "command": "gometer.newTestPlanInFolder",
-        "title": "GoMeter: New Test Plan...",
+        "title": "Tensilix: New Test Plan...",
         "icon": "$(new-file)"
       },
       {
         "command": "gometer.deleteTestPlan",
-        "title": "GoMeter: Delete",
+        "title": "Tensilix: Delete",
         "icon": "$(trash)"
       },
       {
         "command": "gometer.exportPlanAsCsv",
-        "title": "GoMeter: Export Test Results as CSV...",
+        "title": "Tensilix: Export Test Results as CSV...",
         "icon": "$(export)"
       },
       {
         "command": "gometer.exportFolderAsCsv",
-        "title": "GoMeter: Export Folder Test Results as CSV...",
+        "title": "Tensilix: Export Folder Test Results as CSV...",
         "icon": "$(export)"
       },
       {
         "command": "gometer.installAgentSkill",
-        "title": "GoMeter: Install AI Coding Agent Skill",
+        "title": "Tensilix: Install AI Coding Agent Skill",
         "icon": "$(sparkle)"
       }
     ],
@@ -244,14 +247,14 @@
       ]
     },
     "configuration": {
-      "title": "GoMeter",
+      "title": "Tensilix",
       "properties": {
-        "gometer.binaryPath": {
+        "tensilix.binaryPath": {
           "type": "string",
           "default": "",
-          "description": "Path to the gometer executable binary. If empty, uses bundled or PATH binary."
+          "description": "Path to the tensilix/gometer executable binary. If empty, uses bundled or PATH binary."
         },
-        "gometer.defaultOutputFormat": {
+        "tensilix.defaultOutputFormat": {
           "type": "string",
           "default": "json",
           "enum": [
@@ -262,22 +265,31 @@
           ],
           "description": "Report output format"
         },
-        "gometer.reportDirectory": {
+        "tensilix.reportDirectory": {
           "type": "string",
           "default": "./reports",
           "description": "Directory where reports are stored"
+        },
+        "gometer.binaryPath": {
+          "type": "string",
+          "default": "",
+          "description": "Legacy alias for tensilix.binaryPath."
         }
       }
     },
     "jsonValidation": [
       {
         "fileMatch": [
+          "*.tensilix.yaml",
+          "*.tensilix.yml",
+          "*tensilix*.yaml",
+          "*tensilix*.yml",
           "*.gometer.yaml",
           "*.gometer.yml",
           "*gometer*.yaml",
           "*gometer*.yml"
         ],
-        "url": "./schemas/gometer.schema.json"
+        "url": "./schemas/tensilix.schema.json"
       }
     ]
   },

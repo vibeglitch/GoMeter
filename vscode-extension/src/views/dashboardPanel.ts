@@ -26,7 +26,7 @@ export class DashboardPanel {
 
     const panel = vscode.window.createWebviewPanel(
       'gometerDashboard',
-      'GoMeter Live Dashboard',
+      'Tensilix Live Dashboard',
       column || vscode.ViewColumn.Beside,
       {
         enableScripts: true,
@@ -133,7 +133,7 @@ export class DashboardPanel {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GoMeter Live Dashboard</title>
+  <title>Tensilix Live Dashboard</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -704,7 +704,7 @@ export class DashboardPanel {
 <body>
   <div class="top-bar">
     <div class="title-group">
-      <div class="brand">⚡ GoMeter</div>
+      <div class="brand">⚡ Tensilix</div>
       <div id="statusBadge" class="status-badge">Ready</div>
       <div class="run-dropdown-wrapper">
         <button id="runDropdownBtn" class="run-dropdown-trigger" onclick="toggleRunDropdown(event)" type="button" aria-haspopup="listbox" aria-expanded="false">

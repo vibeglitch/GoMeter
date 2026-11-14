@@ -7,48 +7,51 @@ export class SkillInstallerService {
   constructor(private context: vscode.ExtensionContext) {}
 
   /**
-   * Installs or updates the GoMeter agent skill automatically on extension activation.
+   * Installs or updates the Tensilix agent skill automatically on extension activation.
    */
   public async autoInstall(silent: boolean = true): Promise<boolean> {
     try {
-      const bundledSkillDir = this.context.asAbsolutePath('skills/gometer-test-architect');
-      if (!fs.existsSync(bundledSkillDir)) {
-        return false;
-      }
-
+      const skillNames = ['tensilix-test-architect', 'gometer-test-architect'];
       let installedAny = false;
 
-      // 1. Install to Workspace .agents/skills/ (highest priority for project)
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (workspaceFolders && workspaceFolders.length > 0) {
-        const rootPath = workspaceFolders[0].uri.fsPath;
-        const workspaceSkillDir = path.join(rootPath, '.agents', 'skills', 'gometer-test-architect');
-        const copied = this.copyDirSync(bundledSkillDir, workspaceSkillDir);
-        if (copied) installedAny = true;
-      }
+      for (const skillName of skillNames) {
+        const bundledSkillDir = this.context.asAbsolutePath(`skills/${skillName}`);
+        if (!fs.existsSync(bundledSkillDir)) {
+          continue;
+        }
 
-      // 2. Install to Global ~/.gemini/config/skills/ (Antigravity & Gemini agents)
-      const homeDir = os.homedir();
-      const geminiSkillDir = path.join(homeDir, '.gemini', 'config', 'skills', 'gometer-test-architect');
-      try {
-        const copied = this.copyDirSync(bundledSkillDir, geminiSkillDir);
-        if (copied) installedAny = true;
-      } catch {
-        // Ignore permission or file system restrictions
-      }
+        // 1. Install to Workspace .agents/skills/ (highest priority for project)
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const rootPath = workspaceFolders[0].uri.fsPath;
+          const workspaceSkillDir = path.join(rootPath, '.agents', 'skills', skillName);
+          const copied = this.copyDirSync(bundledSkillDir, workspaceSkillDir);
+          if (copied) installedAny = true;
+        }
 
-      // 3. Install to Global ~/.claude/skills/ (Claude Code agents)
-      const claudeSkillDir = path.join(homeDir, '.claude', 'skills', 'gometer-test-architect');
-      try {
-        const copied = this.copyDirSync(bundledSkillDir, claudeSkillDir);
-        if (copied) installedAny = true;
-      } catch {
-        // Ignore permission or file system restrictions
+        // 2. Install to Global ~/.gemini/config/skills/ (Antigravity & Gemini agents)
+        const homeDir = os.homedir();
+        const geminiSkillDir = path.join(homeDir, '.gemini', 'config', 'skills', skillName);
+        try {
+          const copied = this.copyDirSync(bundledSkillDir, geminiSkillDir);
+          if (copied) installedAny = true;
+        } catch {
+          // Ignore permission or file system restrictions
+        }
+
+        // 3. Install to Global ~/.claude/skills/ (Claude Code agents)
+        const claudeSkillDir = path.join(homeDir, '.claude', 'skills', skillName);
+        try {
+          const copied = this.copyDirSync(bundledSkillDir, claudeSkillDir);
+          if (copied) installedAny = true;
+        } catch {
+          // Ignore permission or file system restrictions
+        }
       }
 
       if (!silent) {
         vscode.window.showInformationMessage(
-          'GoMeter: AI Coding Agent skill (gometer-test-architect) installed successfully! Your IDE agent can now sequence and author API tests.'
+          'Tensilix: AI Coding Agent skill (tensilix-test-architect) installed successfully! Your IDE agent can now sequence and author API tests.'
         );
       }
 

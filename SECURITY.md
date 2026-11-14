@@ -24,3 +24,4 @@ If you believe you have discovered a vulnerability in GoMeter (CLI, MCP Server, 
    - The impact of the vulnerability.
 3. You will receive an acknowledgment within 48 hours.
 4. We will coordinate a patched release and credit you in our release notes if requested.
+

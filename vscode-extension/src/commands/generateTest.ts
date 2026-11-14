@@ -21,7 +21,7 @@ export function registerGenerateTestCommand(
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'GoMeter: Generating test plan with AI...',
+          title: 'Tensilix: Generating test plan with AI...',
           cancellable: true,
         },
         async (progress, token) => {
@@ -35,7 +35,7 @@ export function registerGenerateTestCommand(
             });
 
             await vscode.window.showTextDocument(doc);
-            vscode.window.showInformationMessage('GoMeter test plan generated successfully!');
+            vscode.window.showInformationMessage('Tensilix test plan generated successfully!');
           } catch (err: any) {
             vscode.window.showErrorMessage(`AI Test Generation failed: ${err.message || err}`);
           }
